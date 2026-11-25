@@ -11,6 +11,16 @@ export interface Profile {
   updated_at?: string;
 }
 
+export interface BankAccount {
+  id: string;
+  bank_name: string;
+  account_holder: string;
+  rib: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at?: string;
+}
+
 export interface Payment {
   id: string;
   user_id: string;
@@ -18,10 +28,12 @@ export interface Payment {
   amount: number;
   status: 'pending' | 'approved' | 'rejected';
   rejection_reason?: string | null;
+  bank_account_id?: string | null;
   created_at: string;
   reviewed_at?: string | null;
-  // Joined profile data for admin
+  // Joined relations
   profile?: Profile;
+  bank_account?: BankAccount;
 }
 
 export type VideoSource = 'bunny' | 'youtube' | 'vimeo' | 'storage';
@@ -69,4 +81,3 @@ export interface ToastMessage {
   title?: string;
   message: string;
 }
-
