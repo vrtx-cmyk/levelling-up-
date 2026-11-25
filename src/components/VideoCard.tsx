@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Play, Clock, Lock, Sparkles } from 'lucide-react';
 import type { Video, PublicVideo } from '../types';
 
@@ -17,6 +18,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
   onSelect,
   className = '',
 }) => {
+  const { t } = useTranslation();
   const isLocked = !isApproved && !video.is_free_preview;
 
   return (
@@ -42,9 +44,9 @@ export const VideoCard: React.FC<VideoCardProps> = ({
 
           {/* Free Preview Tag if applicable */}
           {video.is_free_preview && (
-            <div className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full bg-amber-400 text-neutral-950 text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1 z-10">
+            <div className="absolute top-2.5 left-2.5 rtl:left-auto rtl:right-2.5 px-2.5 py-0.5 rounded-full bg-amber-400 text-neutral-950 text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1 z-10">
               <Sparkles className="w-3 h-3" />
-              <span>Free Preview</span>
+              <span>{t('videos.freePreview')}</span>
             </div>
           )}
 
@@ -69,7 +71,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
 
         {/* Brand Icon or Number Badge + Title in bold */}
         <div className="flex items-center gap-2.5 mt-4 mb-2">
-          <div className="w-6 h-6 rounded-full bg-[#111111] text-white flex items-center justify-center flex-shrink-0 text-[11px] font-bold">
+          <div className="w-6 h-6 rounded-full bg-[#111111] text-white flex items-center justify-center flex-shrink-0 text-[11px] font-bold force-ltr">
             {index !== undefined ? (
               <span>{index < 9 ? `0${index + 1}` : index + 1}</span>
             ) : (
@@ -83,7 +85,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
 
         {/* Description: max 3 lines with ellipsis */}
         <p className="text-xs sm:text-[13px] text-[#6B7280] line-clamp-3 leading-relaxed">
-          {video.description || 'Exclusive video lesson from the Levelling Up curriculum.'}
+          {video.description || ''}
         </p>
       </div>
 
@@ -91,23 +93,23 @@ export const VideoCard: React.FC<VideoCardProps> = ({
       <div className="pt-3.5 mt-4 border-t border-neutral-100 flex items-center justify-between">
         <div className="flex items-center gap-1.5 text-xs font-mono font-medium text-[#6B7280]">
           <Clock className="w-3.5 h-3.5 text-[#B8860B]" />
-          <span>{video.duration || '00:00'}</span>
+          <span className="force-ltr">{video.duration || '00:00'}</span>
         </div>
 
         <div>
           {isLocked ? (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-neutral-100 text-[#6B7280]">
               <Lock className="w-3.5 h-3.5 text-[#B8860B]" />
-              <span>Locked</span>
+              <span>{t('admin.videos.draft') === 'Draft' ? 'Locked' : 'مغلق'}</span>
             </span>
           ) : video.is_free_preview && !isApproved ? (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-[#B8860B] border border-amber-200">
               <Sparkles className="w-3 h-3" />
-              <span>Preview</span>
+              <span>{t('videos.freePreview')}</span>
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#111111] text-white text-xs font-semibold group-hover:bg-neutral-800 transition-colors shadow-xs">
-              <span>Watch</span>
+              <span>{t('landing.lessons.watchAll')}</span>
               <Play className="w-3 h-3 fill-current ml-0.5" />
             </span>
           )}

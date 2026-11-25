@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink, Routes, Route, Navigate, useNavigate, useLocation, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { Navbar } from '../../components/Navbar';
 import { AdminOverview } from './AdminOverview';
@@ -19,6 +20,9 @@ import {
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language?.startsWith('ar');
+
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -29,26 +33,26 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const desktopNavItems = [
-    { to: '/admin', label: 'Overview', icon: LayoutDashboard, end: true },
-    { to: '/admin/payments', label: 'Payments', icon: CreditCard },
-    { to: '/admin/videos', label: 'Videos', icon: Film },
-    { to: '/admin/users', label: 'Users', icon: UsersIcon },
-    { to: '/admin/settings', label: 'Settings', icon: SettingsIcon },
+    { to: '/admin', label: t('admin.nav.overview'), icon: LayoutDashboard, end: true },
+    { to: '/admin/payments', label: t('admin.nav.payments'), icon: CreditCard },
+    { to: '/admin/videos', label: t('admin.nav.videos'), icon: Film },
+    { to: '/admin/users', label: t('admin.nav.users'), icon: UsersIcon },
+    { to: '/admin/settings', label: t('admin.nav.settings'), icon: SettingsIcon },
   ];
 
   const mobileTabItems = [
-    { to: '/admin/payments', label: 'Payments', icon: CreditCard },
-    { to: '/admin/videos', label: 'Videos', icon: Film },
-    { to: '/admin/users', label: 'Users', icon: UsersIcon },
-    { to: '/admin/settings', label: 'Settings', icon: SettingsIcon },
+    { to: '/admin/payments', label: t('admin.nav.payments'), icon: CreditCard },
+    { to: '/admin/videos', label: t('admin.nav.videos'), icon: Film },
+    { to: '/admin/users', label: t('admin.nav.users'), icon: UsersIcon },
+    { to: '/admin/settings', label: t('admin.nav.settings'), icon: SettingsIcon },
   ];
 
   const getMobileTitle = (pathname: string): string => {
-    if (pathname.startsWith('/admin/payments')) return 'Payments';
-    if (pathname.startsWith('/admin/videos')) return 'Videos';
-    if (pathname.startsWith('/admin/users')) return 'Users';
-    if (pathname.startsWith('/admin/settings')) return 'Settings';
-    return 'Admin Panel';
+    if (pathname.startsWith('/admin/payments')) return t('admin.nav.payments');
+    if (pathname.startsWith('/admin/videos')) return t('admin.nav.videos');
+    if (pathname.startsWith('/admin/users')) return t('admin.nav.users');
+    if (pathname.startsWith('/admin/settings')) return t('admin.nav.settings');
+    return t('admin.common.adminPanel');
   };
 
   return (
@@ -73,8 +77,8 @@ export const AdminDashboard: React.FC = () => {
           to="/"
           className="min-h-[44px] inline-flex items-center gap-1.5 px-3 rounded-xl text-xs font-semibold text-[#111111] hover:bg-neutral-100 border border-neutral-200/80 transition-colors flex-shrink-0"
         >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to site</span>
+          <ArrowLeft className={`w-3.5 h-3.5 ${isRtl ? 'rotate-180' : ''}`} />
+          <span>{t('admin.nav.backToSite')}</span>
         </Link>
       </header>
 
@@ -83,7 +87,7 @@ export const AdminDashboard: React.FC = () => {
         <aside className="hidden md:block w-52 lg:w-56 flex-shrink-0">
           <div className="bg-white rounded-2xl border border-neutral-200/90 p-3 shadow-soft space-y-1 sticky top-24">
             <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">
-              Admin Panel
+              {t('admin.common.adminPanel')}
             </div>
 
             {desktopNavItems.map((item) => {
@@ -113,7 +117,7 @@ export const AdminDashboard: React.FC = () => {
                 className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[#6B7280] hover:text-[#111111] hover:bg-neutral-100 text-xs sm:text-sm font-medium transition-colors"
               >
                 <PlaySquare className="w-4 h-4 text-[#6B7280]" />
-                <span>Video Library</span>
+                <span>{t('nav.videoLibrary')}</span>
               </Link>
 
               <button
@@ -122,7 +126,7 @@ export const AdminDashboard: React.FC = () => {
                 className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[#6B7280] hover:text-rose-600 hover:bg-rose-50 text-xs sm:text-sm font-medium transition-colors cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
-                <span>Logout</span>
+                <span>{t('nav.logOut')}</span>
               </button>
             </div>
           </div>
@@ -170,7 +174,7 @@ export const AdminDashboard: React.FC = () => {
                       />
                       {isActive && (
                         <span
-                          className="absolute -top-0.5 -right-2 w-1.5 h-1.5 rounded-full bg-[#B8860B]"
+                          className="absolute -top-0.5 -right-2 rtl:-right-auto rtl:-left-2 w-1.5 h-1.5 rounded-full bg-[#B8860B]"
                           aria-hidden="true"
                         />
                       )}

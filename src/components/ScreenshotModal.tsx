@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, ExternalLink, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 
 interface ScreenshotModalProps {
@@ -16,6 +17,7 @@ export const ScreenshotModal: React.FC<ScreenshotModalProps> = ({
   userName,
   referenceCode,
 }) => {
+  const { t } = useTranslation();
   const [scale, setScale] = useState(1);
   const pinchStartDistRef = useRef<number | null>(null);
   const pinchStartScaleRef = useRef<number>(1);
@@ -73,9 +75,9 @@ export const ScreenshotModal: React.FC<ScreenshotModalProps> = ({
         >
           <div className="min-w-0">
             <h3 className="font-semibold text-[#111111] text-sm truncate">
-              Payment Receipt
+              {t('admin.payments.viewScreenshot')}
             </h3>
-            <p className="text-xs text-[#6B7280] mt-0.5 truncate">
+            <p className="text-xs text-[#6B7280] mt-0.5 truncate force-ltr">
               {userName || 'Submitted payment receipt'}
               {referenceCode ? ` • ${referenceCode}` : ''}
             </p>
@@ -155,15 +157,15 @@ export const ScreenshotModal: React.FC<ScreenshotModalProps> = ({
           className="px-4 sm:px-6 py-3 border-t border-neutral-100 bg-white flex items-center justify-between gap-3 text-xs text-[#6B7280] flex-shrink-0"
           style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
         >
-          <span className="truncate">
-            Pinch or double-tap to zoom ({Math.round(scale * 100)}%)
+          <span className="truncate force-ltr">
+            Pinch to zoom ({Math.round(scale * 100)}%)
           </span>
           <button
             type="button"
             onClick={onClose}
             className="min-h-[44px] md:min-h-0 px-5 py-2 rounded-xl bg-[#111111] text-white font-semibold hover:bg-neutral-800 transition-colors flex-shrink-0 cursor-pointer"
           >
-            Close
+            {t('common.close')}
           </button>
         </div>
       </div>

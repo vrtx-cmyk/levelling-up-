@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2, X } from 'lucide-react';
 
 interface AdminConfirmDialogProps {
@@ -21,12 +22,13 @@ export const AdminConfirmDialog: React.FC<AdminConfirmDialogProps> = ({
   title,
   description,
   confirmLabel,
-  cancelLabel = 'Cancel',
+  cancelLabel,
   variant = 'dark',
   loading = false,
   onConfirm,
   onCancel,
 }) => {
+  const { t } = useTranslation();
   if (!isOpen) return null;
 
   return (
@@ -52,7 +54,7 @@ export const AdminConfirmDialog: React.FC<AdminConfirmDialogProps> = ({
             type="button"
             onClick={onCancel}
             disabled={loading}
-            className="min-w-[44px] min-h-[44px] -mr-2 -mt-2 flex items-center justify-center rounded-xl text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+            className="min-w-[44px] min-h-[44px] -mr-2 -mt-2 rtl:-mr-0 rtl:-ml-2 flex items-center justify-center rounded-xl text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
             aria-label="Close confirmation dialog"
           >
             <X className="w-5 h-5" />
@@ -68,7 +70,7 @@ export const AdminConfirmDialog: React.FC<AdminConfirmDialogProps> = ({
             disabled={loading}
             className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-xl border border-neutral-200 bg-white text-sm font-semibold text-[#111111] hover:bg-neutral-50 transition-colors cursor-pointer disabled:opacity-50"
           >
-            {cancelLabel}
+            {cancelLabel || t('common.cancel')}
           </button>
           <button
             type="button"

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Logo } from './Logo';
 
 interface FooterProps {
@@ -6,6 +7,8 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ onContactClick }) => {
+  const { t } = useTranslation();
+
   return (
     <footer className="bg-white border-t border-neutral-200/80 pt-12 pb-10 md:pt-16 md:pb-12">
       <div className="max-w-[1200px] w-full mx-auto px-[20px] sm:px-6 lg:px-8">
@@ -14,52 +17,51 @@ export const Footer: React.FC<FooterProps> = ({ onContactClick }) => {
           <div className="space-y-2 max-w-sm">
             <Logo size="md" linkTo="/" />
             <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
-              A modern school for ambitious men. Emotional intelligence, authentic confidence, and relationship mastery.
+              {t('landing.footer.tagline')}
             </p>
           </div>
 
           {/* Footer Navigation */}
           <div className="flex flex-wrap items-center gap-x-6 sm:gap-x-8 gap-y-1 md:gap-y-3 text-[14px] sm:text-[15px] font-medium text-[#6B7280]">
             <a href="#lessons" className="min-h-[44px] md:min-h-0 inline-flex items-center hover:text-[#111111] transition-colors">
-              Lessons
+              {t('landing.footer.lessons')}
             </a>
             <a href="#how-it-works" className="min-h-[44px] md:min-h-0 inline-flex items-center hover:text-[#111111] transition-colors">
-              How it works
+              {t('landing.footer.howItWorks')}
             </a>
             <a href="#reviews" className="min-h-[44px] md:min-h-0 inline-flex items-center hover:text-[#111111] transition-colors">
-              Reviews
+              {t('landing.footer.reviews')}
             </a>
             <a href="#faq" className="min-h-[44px] md:min-h-0 inline-flex items-center hover:text-[#111111] transition-colors">
-              FAQ
+              {t('landing.footer.faq')}
             </a>
             {onContactClick ? (
               <button
                 type="button"
                 onClick={onContactClick}
-                className="min-h-[44px] md:min-h-0 inline-flex items-center hover:text-[#111111] transition-colors"
+                className="min-h-[44px] md:min-h-0 inline-flex items-center hover:text-[#111111] transition-colors cursor-pointer"
               >
-                Contact
+                {t('landing.footer.contact')}
               </button>
             ) : (
               <a href="#contact" className="min-h-[44px] md:min-h-0 inline-flex items-center hover:text-[#111111] transition-colors">
-                Contact
+                {t('landing.footer.contact')}
               </a>
             )}
             <a href="#terms" className="min-h-[44px] md:min-h-0 inline-flex items-center hover:text-[#111111] transition-colors">
-              Terms
+              {t('landing.footer.terms')}
             </a>
             <a href="#privacy" className="min-h-[44px] md:min-h-0 inline-flex items-center hover:text-[#111111] transition-colors">
-              Privacy
+              {t('landing.footer.privacy')}
             </a>
           </div>
         </div>
 
         {/* Bottom bar with copyright and social links */}
         <div className="mt-6 md:mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs sm:text-sm text-[#6B7280]">
-          <p>© 2025 Levelling Up. All rights reserved.</p>
+          <p className="force-ltr">{t('landing.footer.copyright')}</p>
 
           <div className="flex items-center gap-3 sm:gap-5 text-[#6B7280]">
-            {/* YouTube */}
             <a
               href="https://youtube.com"
               target="_blank"
@@ -72,7 +74,6 @@ export const Footer: React.FC<FooterProps> = ({ onContactClick }) => {
               </svg>
             </a>
 
-            {/* X / Twitter */}
             <a
               href="https://x.com"
               target="_blank"
@@ -85,7 +86,6 @@ export const Footer: React.FC<FooterProps> = ({ onContactClick }) => {
               </svg>
             </a>
 
-            {/* Instagram */}
             <a
               href="https://instagram.com"
               target="_blank"

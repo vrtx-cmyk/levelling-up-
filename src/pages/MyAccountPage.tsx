@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Navbar } from '../components/Navbar';
 import { formatDate } from '../lib/utils';
 import {
   User,
-  Mail,
-  KeyRound,
   ShieldCheck,
   Lock,
   Loader2,
@@ -20,6 +19,7 @@ import {
 } from 'lucide-react';
 
 export const MyAccountPage: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const { user, profile, status, isApproved, isAdmin, signOut, updatePassword } = useAuth();
   const { success, error } = useToast();
   const navigate = useNavigate();
@@ -31,11 +31,11 @@ export const MyAccountPage: React.FC = () => {
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPassword || newPassword.length < 6) {
-      error('New password must be at least 6 characters.');
+      error(t('account.passwordError1'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      error('Passwords do not match.');
+      error(t('account.passwordError2'));
       return;
     }
 
@@ -44,9 +44,9 @@ export const MyAccountPage: React.FC = () => {
     setPasswordLoading(false);
 
     if (res.error) {
-      error(res.error, 'Password Update Failed');
+      error(res.error, t('account.passwordFailed'));
     } else {
-      success('Password updated successfully!');
+      success(t('account.passwordSuccess'));
       setNewPassword('');
       setConfirmPassword('');
     }
@@ -61,8 +61,8 @@ export const MyAccountPage: React.FC = () => {
     if (isAdmin) {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-neutral-900 text-white">
-          <ShieldCheck className="w-3.5 h-3.5 text-gold-400" />
-          Administrator
+          <ShieldCheck className="w-3.5 h-3.5 text-[#B8860B]" />
+          {t('account.status.administrator')}
         </span>
       );
     }
@@ -71,27 +71,27 @@ export const MyAccountPage: React.FC = () => {
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-            Approved Member
+            {t('account.status.approvedMember')}
           </span>
         );
       case 'pending':
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
             <Clock className="w-3.5 h-3.5 text-amber-600" />
-            Pending Verification
+            {t('account.status.pendingVerification')}
           </span>
         );
       case 'rejected':
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
             <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
-            Payment Rejected
+            {t('account.status.paymentRejected')}
           </span>
         );
       default:
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-700">
-            No Active Subscription
+            {t('account.status.noSubscription')}
           </span>
         );
     }
@@ -105,10 +105,10 @@ export const MyAccountPage: React.FC = () => {
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900">
-              My Account
+              {t('account.title')}
             </h1>
             <p className="text-xs sm:text-sm text-neutral-500 mt-1">
-              Manage your personal credentials and membership status
+              {t('account.subtitle')}
             </p>
           </div>
 
@@ -119,70 +119,67 @@ export const MyAccountPage: React.FC = () => {
                 className="px-4 py-2 rounded-xl bg-neutral-900 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors flex items-center gap-1.5"
               >
                 <PlaySquare className="w-3.5 h-3.5" />
-                <span>Video Library</span>
+                <span>{t('account.videoLibrary')}</span>
               </Link>
             ) : (
               <Link
                 to="/activate"
                 className="px-4 py-2 rounded-xl bg-neutral-900 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors flex items-center gap-1.5"
               >
-                <CreditCard className="w-3.5 h-3.5 text-gold-400" />
-                <span>Activate Access</span>
+                <CreditCard className="w-3.5 h-3.5 text-[#B8860B]" />
+                <span>{t('account.activateAccess')}</span>
               </Link>
             )}
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Left Column: Profile Card */}
           <div className="md:col-span-2 space-y-6">
-            {/* Membership Details */}
             <div className="bg-white rounded-3xl border border-neutral-200/90 p-6 sm:p-8 shadow-soft">
               <h2 className="text-base font-bold text-neutral-900 tracking-tight mb-4 flex items-center gap-2">
                 <User className="w-4 h-4 text-neutral-500" />
-                <span>Profile & Membership</span>
+                <span>{t('account.profileCard')}</span>
               </h2>
 
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-neutral-100 gap-1">
-                  <span className="text-xs font-medium text-neutral-500">Email Address</span>
-                  <span className="text-xs sm:text-sm font-semibold text-neutral-900">
+                  <span className="text-xs font-medium text-neutral-500">{t('account.emailLabel')}</span>
+                  <span className="text-xs sm:text-sm font-semibold text-neutral-900 force-ltr">
                     {profile?.email || user?.email}
                   </span>
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-neutral-100 gap-1">
-                  <span className="text-xs font-medium text-neutral-500">Membership Status</span>
+                  <span className="text-xs font-medium text-neutral-500">{t('account.statusLabel')}</span>
                   <div>{getStatusBadge()}</div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-neutral-100 gap-1">
-                  <span className="text-xs font-medium text-neutral-500">Unique Reference Code</span>
-                  <span className="font-mono font-bold text-xs sm:text-sm text-neutral-900 bg-neutral-100 px-2.5 py-1 rounded-lg">
+                  <span className="text-xs font-medium text-neutral-500">{t('account.refCodeLabel')}</span>
+                  <span className="font-mono font-bold text-xs sm:text-sm text-neutral-900 bg-neutral-100 px-2.5 py-1 rounded-lg force-ltr">
                     {profile?.reference_code || 'LU20251124'}
                   </span>
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-neutral-100 gap-1">
-                  <span className="text-xs font-medium text-neutral-500">Registered On</span>
-                  <span className="text-xs text-neutral-700">
-                    {profile?.created_at ? formatDate(profile.created_at) : 'N/A'}
+                  <span className="text-xs font-medium text-neutral-500">{t('account.registeredLabel')}</span>
+                  <span className="text-xs text-neutral-700 force-ltr">
+                    {profile?.created_at ? formatDate(profile.created_at, i18n.language) : 'N/A'}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Change Password */}
             <div id="security" className="bg-white rounded-3xl border border-neutral-200/90 p-6 sm:p-8 shadow-soft">
               <h2 className="text-base font-bold text-neutral-900 tracking-tight mb-4 flex items-center gap-2">
                 <Lock className="w-4 h-4 text-neutral-500" />
-                <span>Security & Password</span>
+                <span>{t('account.securityCard')}</span>
               </h2>
 
               <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-600 mb-1">
-                    New Password
+                    {t('account.newPassword')}
                   </label>
                   <input
                     type="password"
@@ -196,7 +193,7 @@ export const MyAccountPage: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-600 mb-1">
-                    Confirm New Password
+                    {t('account.confirmNewPassword')}
                   </label>
                   <input
                     type="password"
@@ -212,12 +209,12 @@ export const MyAccountPage: React.FC = () => {
                   <button
                     type="submit"
                     disabled={passwordLoading}
-                    className="px-5 py-2.5 rounded-xl bg-neutral-900 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors flex items-center gap-2 disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-xl bg-neutral-900 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors flex items-center gap-2 disabled:opacity-50 cursor-pointer"
                   >
                     {passwordLoading ? (
                       <Loader2 className="w-4 h-4 animate-spin text-white" />
                     ) : (
-                      'Update Password'
+                      t('account.updatePassword')
                     )}
                   </button>
                 </div>
@@ -225,17 +222,16 @@ export const MyAccountPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Column: Actions / Support */}
           <div className="space-y-6">
             <div className="bg-white rounded-3xl border border-neutral-200/90 p-6 shadow-soft">
-              <h3 className="text-sm font-bold text-neutral-900 mb-3">Quick Navigation</h3>
+              <h3 className="text-sm font-bold text-neutral-900 mb-3">{t('account.quickNav')}</h3>
               <div className="space-y-2">
                 {isApproved && (
                   <Link
                     to="/videos"
                     className="block p-3 rounded-xl border border-neutral-100 hover:bg-neutral-50 transition-colors text-xs font-medium text-neutral-800"
                   >
-                    Watch Lessons
+                    {t('account.watchLessons')}
                   </Link>
                 )}
                 {!isApproved && (
@@ -243,7 +239,7 @@ export const MyAccountPage: React.FC = () => {
                     to="/activate"
                     className="block p-3 rounded-xl border border-neutral-100 hover:bg-neutral-50 transition-colors text-xs font-medium text-neutral-800"
                   >
-                    Submit Transfer Receipt
+                    {t('account.submitReceipt')}
                   </Link>
                 )}
                 {isAdmin && (
@@ -251,7 +247,7 @@ export const MyAccountPage: React.FC = () => {
                     to="/admin"
                     className="block p-3 rounded-xl bg-neutral-900 text-white hover:bg-neutral-800 transition-colors text-xs font-semibold"
                   >
-                    Admin Dashboard
+                    {t('account.adminDashboard')}
                   </Link>
                 )}
               </div>
@@ -259,10 +255,10 @@ export const MyAccountPage: React.FC = () => {
               <div className="mt-6 pt-4 border-t border-neutral-100">
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold transition-colors"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold transition-colors cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>Log out</span>
+                  <span>{t('account.logOut')}</span>
                 </button>
               </div>
             </div>
@@ -272,4 +268,3 @@ export const MyAccountPage: React.FC = () => {
     </div>
   );
 };
-

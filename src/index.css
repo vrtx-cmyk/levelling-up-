@@ -8,10 +8,35 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
+  /* Arabic Font & Typography rules */
+  html[lang="ar"], html[dir="rtl"] {
+    font-family: 'Noto Sans Arabic', system-ui, -apple-system, sans-serif;
+  }
+
+  html[lang="ar"] .tracking-wider,
+  html[lang="ar"] .tracking-widest,
+  html[lang="ar"] .tracking-tight,
+  html[lang="ar"] .tracking-normal,
+  html[lang="ar"] [class*="tracking-"] {
+    letter-spacing: 0 !important;
+  }
+
+  html[lang="ar"] .uppercase {
+    text-transform: none !important;
+  }
+
   body {
     background-color: #FAFAFA;
     color: #171717;
   }
+}
+
+/* Force LTR and isolate digits/IDs (RIB, email, phone, reference code) */
+.force-ltr {
+  direction: ltr !important;
+  text-align: left;
+  unicode-bidi: isolate;
+  display: inline-block;
 }
 
 /* Custom subtle scrollbar */
@@ -40,4 +65,3 @@ video.protected-video {
   -moz-user-select: none;
   -ms-user-select: none;
 }
-

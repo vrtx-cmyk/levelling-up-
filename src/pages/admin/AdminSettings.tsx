@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../context/ToastContext';
 import { AdminConfirmDialog } from '../../components/AdminConfirmDialog';
@@ -26,6 +27,7 @@ interface EditableBankAccount {
 }
 
 export const AdminSettings: React.FC = () => {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState<Settings>({
     rib: '007 780 0001234567890123 45',
     account_holder: 'Levelling Up Media',
@@ -242,10 +244,10 @@ export const AdminSettings: React.FC = () => {
       {/* Page Header */}
       <div>
         <h1 className="hidden md:block text-2xl font-bold tracking-tight text-[#111111]">
-          Settings
+          {t('admin.settings.title', 'Settings')}
         </h1>
         <p className="text-xs sm:text-sm text-[#6B7280] md:mt-1">
-          Configure bank transfer accounts, membership pricing, and contact details
+          {t('admin.settings.subtitle', 'Configure bank transfer accounts, membership pricing, and contact details')}
         </p>
       </div>
 
@@ -258,7 +260,7 @@ export const AdminSettings: React.FC = () => {
             onClick={loadSettingsAndBankAccounts}
             className="min-h-[44px] px-5 py-2.5 rounded-xl bg-[#111111] text-white text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer"
           >
-            Retry
+            {t('common.retry', 'Retry')}
           </button>
         </div>
       )}
@@ -285,8 +287,8 @@ export const AdminSettings: React.FC = () => {
                   <div>
                     <h2 className="text-base sm:text-lg font-bold text-[#111111] flex items-center gap-2">
                       <Landmark className="w-5 h-5 text-[#B8860B]" />
-                      <span>Bank Accounts</span>
-                      <span className="text-xs font-semibold text-[#6B7280]">
+                      <span>{t('admin.settings.bankAccounts', 'Bank Accounts')}</span>
+                      <span className="text-xs font-semibold text-[#6B7280] force-ltr">
                         ({bankAccounts.length}/3)
                       </span>
                     </h2>
@@ -302,14 +304,14 @@ export const AdminSettings: React.FC = () => {
                     className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-xs font-semibold text-[#111111] disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs transition-colors self-start sm:self-auto cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Add bank account</span>
+                    <span>{t('admin.settings.addBankAccount', 'Add bank account')}</span>
                   </button>
                 </div>
 
                 {bankAccounts.length === 0 ? (
                   <div className="p-6 rounded-2xl border border-dashed border-neutral-200 text-center text-[#6B7280] bg-[#FAFAFA]">
                     <Building2 className="w-8 h-8 mx-auto text-neutral-300 mb-2" />
-                    <p className="text-sm font-semibold text-[#111111]">No bank accounts added</p>
+                    <p className="text-sm font-semibold text-[#111111]">{t('admin.settings.noBankAccounts', 'No bank accounts added')}</p>
                     <p className="text-xs mt-1 text-[#6B7280]">
                       Click &ldquo;Add bank account&rdquo; above to add your first bank details.
                     </p>
@@ -319,12 +321,12 @@ export const AdminSettings: React.FC = () => {
                     {bankAccounts.map((account, index) => (
                       <div
                         key={account.tempId}
-                        className="p-4 sm:p-5 rounded-2xl border border-neutral-200/90 bg-[#FAFAFA] space-y-4 transition-all"
+                        className="p-4 sm:p-5 rounded-2xl border border-neutral-200/90 bg-[#FAFAFA] space-y-4 transition-all text-start"
                       >
                         {/* Card Header: Account #, Active Toggle, Remove Button */}
                         <div className="flex items-center justify-between gap-3 pb-3 border-b border-neutral-200/70">
                           <div className="flex items-center gap-2">
-                            <span className="w-6 h-6 rounded-full bg-[#111111] text-white flex items-center justify-center text-xs font-bold">
+                            <span className="w-6 h-6 rounded-full bg-[#111111] text-white flex items-center justify-center text-xs font-bold force-ltr">
                               {index + 1}
                             </span>
                             <span className="text-sm font-bold text-[#111111]">
@@ -336,7 +338,7 @@ export const AdminSettings: React.FC = () => {
                             {/* Active Switch */}
                             <label className="inline-flex items-center gap-2 cursor-pointer select-none">
                               <span className="text-xs font-medium text-[#6B7280]">
-                                {account.is_active ? 'Active' : 'Inactive'}
+                                {account.is_active ? t('admin.settings.active', 'Active') : t('admin.settings.inactive', 'Inactive')}
                               </span>
                               <button
                                 type="button"
@@ -351,7 +353,7 @@ export const AdminSettings: React.FC = () => {
                               >
                                 <span
                                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                    account.is_active ? 'translate-x-6' : 'translate-x-1'
+                                    account.is_active ? 'translate-x-6 rtl:-translate-x-6' : 'translate-x-1 rtl:-translate-x-1'
                                   }`}
                                 />
                               </button>
@@ -362,7 +364,7 @@ export const AdminSettings: React.FC = () => {
                               type="button"
                               onClick={() => setConfirmRemoveAccount(account)}
                               className="p-1.5 rounded-lg border border-neutral-200 bg-white hover:bg-rose-50 text-neutral-400 hover:text-rose-600 transition-colors cursor-pointer"
-                              title="Remove account"
+                              title={t('admin.settings.removeBank', 'Remove')}
                               aria-label="Remove bank account"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -374,10 +376,10 @@ export const AdminSettings: React.FC = () => {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
                             <label className="block text-xs font-semibold uppercase tracking-wider text-[#111111] mb-1.5">
-                              Bank Name
+                              {t('admin.settings.bankName', 'Bank Name')}
                             </label>
                             <div className="relative">
-                              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#6B7280]">
+                              <div className="absolute inset-y-0 start-0 ps-3.5 flex items-center pointer-events-none text-[#6B7280]">
                                 <Building2 className="w-4 h-4" />
                               </div>
                               <input
@@ -388,17 +390,17 @@ export const AdminSettings: React.FC = () => {
                                   handleUpdateAccount(account.tempId, 'bank_name', e.target.value)
                                 }
                                 placeholder="e.g. Attijariwafa Bank, CIH Bank"
-                                className="w-full min-h-[44px] pl-10 pr-4 py-2 bg-white border border-neutral-200 rounded-xl text-[16px] md:text-sm text-[#111111] focus:outline-none focus:ring-2 focus:ring-[#111111] transition-all"
+                                className="w-full min-h-[44px] ps-10 pe-4 py-2 bg-white border border-neutral-200 rounded-xl text-[16px] md:text-sm text-[#111111] focus:outline-none focus:ring-2 focus:ring-[#111111] transition-all"
                               />
                             </div>
                           </div>
 
                           <div>
                             <label className="block text-xs font-semibold uppercase tracking-wider text-[#111111] mb-1.5">
-                              Account Holder
+                              {t('admin.settings.accountHolder', 'Account Holder')}
                             </label>
                             <div className="relative">
-                              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#6B7280]">
+                              <div className="absolute inset-y-0 start-0 ps-3.5 flex items-center pointer-events-none text-[#6B7280]">
                                 <User className="w-4 h-4" />
                               </div>
                               <input
@@ -409,7 +411,7 @@ export const AdminSettings: React.FC = () => {
                                   handleUpdateAccount(account.tempId, 'account_holder', e.target.value)
                                 }
                                 placeholder="Levelling Up Media"
-                                className="w-full min-h-[44px] pl-10 pr-4 py-2 bg-white border border-neutral-200 rounded-xl text-[16px] md:text-sm text-[#111111] focus:outline-none focus:ring-2 focus:ring-[#111111] transition-all"
+                                className="w-full min-h-[44px] ps-10 pe-4 py-2 bg-white border border-neutral-200 rounded-xl text-[16px] md:text-sm text-[#111111] focus:outline-none focus:ring-2 focus:ring-[#111111] transition-all"
                               />
                             </div>
                           </div>
@@ -418,10 +420,10 @@ export const AdminSettings: React.FC = () => {
                         {/* RIB */}
                         <div>
                           <label className="block text-xs font-semibold uppercase tracking-wider text-[#111111] mb-1.5">
-                            RIB (24 digits)
+                            {t('admin.settings.rib', 'RIB (24 digits)')}
                           </label>
                           <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#6B7280]">
+                            <div className="absolute inset-y-0 start-0 ps-3.5 flex items-center pointer-events-none text-[#6B7280]">
                               <CreditCard className="w-4 h-4" />
                             </div>
                             <input
@@ -432,7 +434,7 @@ export const AdminSettings: React.FC = () => {
                                 handleUpdateAccount(account.tempId, 'rib', e.target.value)
                               }
                               placeholder="007 780 0001234567890123 45"
-                              className="w-full min-h-[44px] pl-10 pr-4 py-2 font-mono text-[16px] md:text-sm bg-white border border-neutral-200 rounded-xl text-[#111111] focus:outline-none focus:ring-2 focus:ring-[#111111] transition-all"
+                              className="w-full min-h-[44px] ps-10 pe-4 py-2 font-mono text-[16px] md:text-sm bg-white border border-neutral-200 rounded-xl text-[#111111] focus:outline-none focus:ring-2 focus:ring-[#111111] transition-all force-ltr text-start"
                             />
                           </div>
                         </div>
@@ -445,15 +447,15 @@ export const AdminSettings: React.FC = () => {
               {/* ======================================================== */}
               {/* SECTION 2: PRICE & CONTACT DETAILS */}
               {/* ======================================================== */}
-              <div className="space-y-4 pt-4 border-t border-neutral-100">
+              <div className="space-y-4 pt-4 border-t border-neutral-100 text-start">
                 <h2 className="text-base sm:text-lg font-bold text-[#111111]">
-                  Pricing & Contact
+                  {t('admin.settings.pricingContact', 'Pricing & Contact')}
                 </h2>
 
                 {/* Price (MAD) */}
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-[#111111] mb-1.5">
-                    Price (MAD)
+                    {t('admin.settings.price', 'Price (MAD)')}
                   </label>
                   <input
                     type="number"
@@ -463,10 +465,10 @@ export const AdminSettings: React.FC = () => {
                     onChange={(e) => setSettings({ ...settings, price: Number(e.target.value) })}
                     placeholder="499"
                     required
-                    className="w-full min-h-[44px] px-4 py-2.5 bg-[#FAFAFA] border border-neutral-200 rounded-xl text-[16px] md:text-sm text-[#111111] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#111111] transition-all"
+                    className="w-full min-h-[44px] px-4 py-2.5 bg-[#FAFAFA] border border-neutral-200 rounded-xl text-[16px] md:text-sm text-[#111111] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#111111] transition-all force-ltr text-start"
                   />
                   <p className="text-[11px] text-[#6B7280] mt-1">
-                    One-time lifetime membership amount in Moroccan Dirham.
+                    {t('admin.settings.priceNote', 'One-time lifetime membership amount in Moroccan Dirham.')}
                   </p>
                 </div>
 
@@ -474,27 +476,27 @@ export const AdminSettings: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-[#111111] mb-1.5">
-                      WhatsApp
+                      {t('admin.settings.whatsapp', 'WhatsApp')}
                     </label>
                     <input
                       type="text"
                       value={settings.contact_whatsapp || ''}
                       onChange={(e) => setSettings({ ...settings, contact_whatsapp: e.target.value })}
                       placeholder="+212600000000"
-                      className="w-full min-h-[44px] px-4 py-2.5 bg-[#FAFAFA] border border-neutral-200 rounded-xl text-[16px] md:text-sm text-[#111111] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#111111] transition-all"
+                      className="w-full min-h-[44px] px-4 py-2.5 bg-[#FAFAFA] border border-neutral-200 rounded-xl text-[16px] md:text-sm text-[#111111] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#111111] transition-all force-ltr text-start"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-[#111111] mb-1.5">
-                      Contact Email
+                      {t('admin.settings.contactEmail', 'Contact Email')}
                     </label>
                     <input
                       type="email"
                       value={settings.contact_email || ''}
                       onChange={(e) => setSettings({ ...settings, contact_email: e.target.value })}
                       placeholder="contact@levellingup.com"
-                      className="w-full min-h-[44px] px-4 py-2.5 bg-[#FAFAFA] border border-neutral-200 rounded-xl text-[16px] md:text-sm text-[#111111] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#111111] transition-all"
+                      className="w-full min-h-[44px] px-4 py-2.5 bg-[#FAFAFA] border border-neutral-200 rounded-xl text-[16px] md:text-sm text-[#111111] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#111111] transition-all force-ltr text-start"
                     />
                   </div>
                 </div>
@@ -511,12 +513,12 @@ export const AdminSettings: React.FC = () => {
                     {saving ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin text-white" />
-                        <span>Saving changes...</span>
+                        <span>{t('admin.settings.savingChanges', 'Saving changes...')}</span>
                       </>
                     ) : (
                       <>
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>Save changes</span>
+                        <span>{t('admin.settings.saveChanges', 'Save changes')}</span>
                       </>
                     )}
                   </button>
@@ -530,13 +532,13 @@ export const AdminSettings: React.FC = () => {
       {/* Remove Account Confirmation */}
       <AdminConfirmDialog
         isOpen={Boolean(confirmRemoveAccount)}
-        title="Remove bank account?"
+        title={t('admin.settings.removeBankConfirm', 'Remove bank account?')}
         description={
           confirmRemoveAccount
             ? `Remove ${confirmRemoveAccount.bank_name || 'this bank account'} from your active accounts?`
             : ''
         }
-        confirmLabel="Remove"
+        confirmLabel={t('admin.settings.removeBank', 'Remove')}
         variant="danger"
         onConfirm={handleConfirmRemove}
         onCancel={() => setConfirmRemoveAccount(null)}

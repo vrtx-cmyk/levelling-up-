@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../context/ToastContext';
 import { formatDate } from '../../lib/utils';
@@ -29,6 +30,8 @@ import {
 } from 'lucide-react';
 
 export const AdminVideos: React.FC = () => {
+  const { t, i18n } = useTranslation();
+
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -115,7 +118,6 @@ export const AdminVideos: React.FC = () => {
     setEditingVideo(video);
     setTitle(video.title);
     setDescription(video.description || '');
-    // For embed videos, show video_url; for storage videos, show video_path
     const editUrl = video.video_url || video.video_path || '';
     setVideoUrl(editUrl);
     setDuration(video.duration || '00:00');
@@ -126,75 +128,77 @@ export const AdminVideos: React.FC = () => {
     setUploadProgress(null);
     setFormError(null);
     setUrlError(null);
-    setDetectedSource(video.video_source || detectSource(editUrl) || null);
+    setDetectedSource(video.video_source || detectSource(editUrl));
     setIsFormOpen(true);
   };
 
   const handleCloseForm = () => {
-    if (submitting) return;
     setIsFormOpen(false);
     setEditingVideo(null);
+    setSelectedThumbFile(null);
+    setThumbPreviewUrl(null);
+    setUploadProgress(null);
     setFormError(null);
     setUrlError(null);
+    setDetectedSource(null);
   };
 
-  /** Auto-clean iframe paste and validate URL as user types */
-  const handleVideoUrlChange = (raw: string) => {
-    // Auto-extract src from <iframe> paste
-    const cleaned = extractSrcFromIframe(raw);
+  const handleVideoUrlChange = (value: string) => {
+    const cleaned = extractSrcFromIframe(value);
     setVideoUrl(cleaned);
+    setUrlError(null);
 
-    if (!cleaned.trim()) {
-      setUrlError(null);
-      setDetectedSource(null);
-      return;
-    }
-
-    const result = parseVideoInput(cleaned);
-    if (!result.success) {
-      setUrlError(result.error);
-      setDetectedSource(null);
-    } else {
-      setUrlError(null);
-      setDetectedSource(result.source);
-      // If the URL was converted (e.g. watch → embed), update the field
-      if (result.url !== cleaned) {
-        setVideoUrl(result.url);
+    if (cleaned.trim()) {
+      const parsed = parseVideoInput(cleaned.trim());
+      if (parsed.success) {
+        setDetectedSource(parsed.source);
+      } else {
+        setDetectedSource(null);
       }
+    } else {
+      setDetectedSource(null);
     }
   };
 
   const handleThumbSelect = (file: File | undefined) => {
     if (!file) return;
-    setFormError(null);
+    if (!file.type.startsWith('image/')) {
+      toastError('Please select a valid image file (PNG, JPG, JPEG, WEBP).');
+      return;
+    }
+    const MAX_THUMB_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_THUMB_SIZE) {
+      toastError('Thumbnail image must be under 5MB.');
+      return;
+    }
     setSelectedThumbFile(file);
     const objectUrl = URL.createObjectURL(file);
     setThumbPreviewUrl(objectUrl);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+    setUrlError(null);
 
     const cleanTitle = title.trim();
-    const cleanUrl = videoUrl.trim();
-    const cleanDuration = duration.trim() || '00:00';
-
     if (!cleanTitle) {
       setFormError('Please enter a video title.');
       return;
     }
 
-    if (!cleanUrl && !editingVideo?.video_path) {
-      setFormError('Please enter a video embed URL.');
+    const cleanDuration = duration.trim();
+    if (!/^\d{1,3}:[0-5]\d$/.test(cleanDuration)) {
+      setFormError('Please enter duration in mm:ss format (e.g. 12:45).');
       return;
     }
 
-    // Validate video URL
+    const cleanUrl = videoUrl.trim();
     if (cleanUrl) {
       const parsed = parseVideoInput(cleanUrl);
       if (!parsed.success) {
-        setFormError(parsed.error);
+        setUrlError(parsed.error || 'This is not a valid embed link. Copy the Embed URL from Bunny.');
+        setFormError('Please enter a valid Bunny embed link, YouTube or Vimeo URL.');
         return;
       }
     }
@@ -203,7 +207,6 @@ export const AdminVideos: React.FC = () => {
     setUploadProgress(15);
 
     try {
-      // Determine video_url, video_source, and video_path
       let finalVideoUrl: string | null = null;
       let finalVideoSource: VideoSource = 'storage';
       let finalVideoPath = editingVideo?.video_path || '';
@@ -213,13 +216,12 @@ export const AdminVideos: React.FC = () => {
         if (parsed.success) {
           finalVideoUrl = parsed.url;
           finalVideoSource = parsed.source;
-          finalVideoPath = parsed.url; // For embed videos, store the URL as path too for compat
+          finalVideoPath = parsed.url;
         }
       }
 
       let finalThumbPath = thumbPreviewUrl ? editingVideo?.thumbnail_path || null : null;
 
-      // 1. Upload Thumbnail File if chosen
       if (selectedThumbFile) {
         setUploadProgress(40);
         const thumbExt = selectedThumbFile.name.split('.').pop() || 'jpg';
@@ -245,7 +247,6 @@ export const AdminVideos: React.FC = () => {
 
       setUploadProgress(70);
 
-      // 2. Save video record
       const videoRecord = {
         title: cleanTitle,
         description: description.trim(),
@@ -322,7 +323,6 @@ export const AdminVideos: React.FC = () => {
       const { error: delErr } = await supabase.from('videos').delete().eq('id', video.id);
       if (delErr) throw delErr;
 
-      // Only remove from storage if it's a storage-uploaded video (not a URL)
       if (
         video.video_path &&
         !video.video_path.startsWith('http') &&
@@ -342,7 +342,6 @@ export const AdminVideos: React.FC = () => {
     }
   };
 
-  /** Source badge label */
   const sourceLabel = (src?: VideoSource | string) => {
     switch (src) {
       case 'bunny': return 'Bunny';
@@ -352,7 +351,6 @@ export const AdminVideos: React.FC = () => {
     }
   };
 
-  /** Source badge colors */
   const sourceBadge = (src?: VideoSource | string) => {
     switch (src) {
       case 'bunny': return 'bg-orange-50 text-orange-700 border-orange-200';
@@ -362,7 +360,6 @@ export const AdminVideos: React.FC = () => {
     }
   };
 
-  /** Preview embed URL for the form */
   const previewEmbedUrl = (() => {
     if (!videoUrl.trim()) return null;
     const parsed = parseVideoInput(videoUrl.trim());
@@ -377,7 +374,7 @@ export const AdminVideos: React.FC = () => {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="hidden md:block text-2xl font-bold tracking-tight text-[#111111]">
-              Videos
+              {t('admin.videos.title')}
             </h1>
             <p className="text-xs sm:text-sm text-[#6B7280] md:mt-1">
               Manage video lessons, add embed links, and toggle publishing
@@ -400,7 +397,7 @@ export const AdminVideos: React.FC = () => {
           className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#111111] text-white text-xs sm:text-sm font-semibold hover:bg-neutral-800 shadow-soft transition-colors self-start md:self-center cursor-pointer"
         >
           <Plus className="w-4 h-4" />
-          <span>Add new video</span>
+          <span>{t('admin.videos.addNew')}</span>
         </button>
       </div>
 
@@ -414,12 +411,12 @@ export const AdminVideos: React.FC = () => {
             onClick={loadVideos}
             className="min-h-[44px] px-5 py-2.5 rounded-xl bg-[#111111] text-white text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer"
           >
-            Retry
+            {t('common.retry')}
           </button>
         </div>
       )}
 
-      {/* Mobile Loading Skeletons (< 768px) */}
+      {/* Mobile Loading Skeletons */}
       {loading && (
         <div className="md:hidden space-y-3.5">
           {[1, 2, 3].map((sk) => (
@@ -438,16 +435,13 @@ export const AdminVideos: React.FC = () => {
         </div>
       )}
 
-      {/* Mobile Video Cards (< 768px) */}
+      {/* Mobile Video Cards */}
       {!loading && !loadError && (
         <div className="md:hidden space-y-3.5">
           {videos.length === 0 ? (
             <div className="bg-white rounded-2xl border border-neutral-200/90 p-10 text-center text-[#6B7280] shadow-soft">
               <Film className="w-8 h-8 mx-auto text-neutral-300 mb-2" />
               <p className="text-sm font-semibold text-[#111111]">No videos yet</p>
-              <p className="text-xs text-[#6B7280] mt-1">
-                Tap &ldquo;Add new video&rdquo; below to create your first lesson.
-              </p>
             </div>
           ) : (
             videos.map((vid) => (
@@ -456,7 +450,6 @@ export const AdminVideos: React.FC = () => {
                 data-video-card={vid.id}
                 className="bg-white rounded-2xl border border-neutral-200/90 p-4 shadow-soft space-y-3"
               >
-                {/* Thumbnail */}
                 <div className="relative aspect-video w-full rounded-xl bg-neutral-900 overflow-hidden">
                   {vid.thumbnail_path ? (
                     <img
@@ -470,21 +463,19 @@ export const AdminVideos: React.FC = () => {
                     </div>
                   )}
 
-                  <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 font-mono text-[11px] font-semibold text-white bg-black/70 backdrop-blur-xs px-2 py-0.5 rounded-md">
+                  <span className="absolute bottom-2 right-2 rtl:right-auto rtl:left-2 inline-flex items-center gap-1 font-mono text-[11px] font-semibold text-white bg-black/70 backdrop-blur-xs px-2 py-0.5 rounded-md force-ltr">
                     <Clock className="w-3 h-3" />
                     {vid.duration || '00:00'}
                   </span>
 
-                  {/* Source badge on thumbnail */}
                   {vid.video_source && vid.video_source !== 'storage' && (
-                    <span className={`absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${sourceBadge(vid.video_source)}`}>
+                    <span className={`absolute top-2 left-2 rtl:left-auto rtl:right-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${sourceBadge(vid.video_source)}`}>
                       <Play className="w-2.5 h-2.5" />
                       {sourceLabel(vid.video_source)}
                     </span>
                   )}
                 </div>
 
-                {/* Title + Status & Date */}
                 <div className="space-y-1.5">
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="text-base font-bold text-[#111111] leading-snug break-words">
@@ -498,53 +489,50 @@ export const AdminVideos: React.FC = () => {
                       onClick={() => handleTogglePublish(vid)}
                       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
                         vid.is_published
-                          ? 'bg-emerald-50 text-emerald-700'
-                          : 'bg-neutral-100 text-[#6B7280]'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/70'
+                          : 'bg-neutral-100 text-[#6B7280] border border-neutral-200'
                       }`}
                     >
                       {vid.is_published ? (
                         <>
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Published</span>
+                          <Eye className="w-3 h-3 text-emerald-600" />
+                          <span>{t('admin.videos.published')}</span>
                         </>
                       ) : (
                         <>
-                          <EyeOff className="w-3.5 h-3.5" />
-                          <span>Draft</span>
+                          <EyeOff className="w-3 h-3 text-neutral-500" />
+                          <span>{t('admin.videos.draft')}</span>
                         </>
                       )}
                     </button>
 
                     {vid.is_free_preview && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-[#B8860B] border border-amber-200">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-[#B8860B] border border-amber-200">
                         <Sparkles className="w-3 h-3" />
-                        <span>Preview</span>
+                        <span>Free Preview</span>
                       </span>
                     )}
 
-                    <span className="text-[#6B7280] ml-auto">
-                      {formatDate(vid.created_at)}
-                    </span>
+                    <span className="text-[#6B7280] text-[11px] force-ltr">{formatDate(vid.created_at, i18n.language)}</span>
                   </div>
                 </div>
 
-                {/* Edit & Delete Actions (>= 44px) */}
-                <div className="grid grid-cols-2 gap-2.5 pt-1">
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-neutral-100">
                   <button
                     type="button"
                     onClick={() => handleOpenEditForm(vid)}
-                    className="min-h-[44px] rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-[#111111] text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    className="min-h-[44px] rounded-xl border border-neutral-200 bg-[#FAFAFA] hover:bg-neutral-100 text-xs font-semibold text-[#111111] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                   >
-                    <Edit3 className="w-4 h-4" />
-                    <span>Edit</span>
+                    <Edit3 className="w-4 h-4 text-[#6B7280]" />
+                    <span>{t('admin.videos.edit')}</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setConfirmDeleteVideo(vid)}
-                    className="min-h-[44px] rounded-xl border border-rose-200 bg-rose-50/70 hover:bg-rose-100 text-rose-600 text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    className="min-h-[44px] rounded-xl border border-rose-200 bg-rose-50/60 hover:bg-rose-100 text-xs font-semibold text-rose-700 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                   >
-                    <Trash2 className="w-4 h-4" />
-                    <span>Delete</span>
+                    <Trash2 className="w-4 h-4 text-rose-600" />
+                    <span>{t('admin.videos.delete')}</span>
                   </button>
                 </div>
               </div>
@@ -553,141 +541,110 @@ export const AdminVideos: React.FC = () => {
         </div>
       )}
 
-      {/* Mobile Sticky "Add new video" CTA above bottom navigation */}
-      <div
-        className="md:hidden fixed bottom-[calc(56px+env(safe-area-inset-bottom)+10px)] inset-x-4 z-30 pointer-events-none"
-      >
-        <button
-          type="button"
-          onClick={handleOpenAddForm}
-          className="pointer-events-auto w-full min-h-[48px] flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#111111] hover:bg-neutral-800 text-white text-sm font-semibold shadow-soft-lg transition-colors cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add new video</span>
-        </button>
-      </div>
-
       {/* Desktop Videos Table (>= 768px) */}
-      {!loadError && (
+      {!loading && !loadError && (
         <div className="hidden md:block bg-white rounded-2xl border border-neutral-200/90 shadow-soft overflow-hidden">
-          {loading ? (
-            <div className="p-12 text-center text-[#6B7280] flex flex-col items-center gap-2">
-              <Loader2 className="w-6 h-6 animate-spin text-[#111111]" />
-              <span className="text-xs">Loading videos...</span>
-            </div>
-          ) : videos.length === 0 ? (
-            <div className="p-12 text-center text-[#6B7280]">
-              <Film className="w-8 h-8 mx-auto text-neutral-300 mb-2" />
-              <p className="text-sm font-semibold text-[#111111]">No videos yet</p>
-              <p className="text-xs text-[#6B7280] mt-0.5">
-                Click &quot;Add new video&quot; to create your first lesson.
-              </p>
+          {videos.length === 0 ? (
+            <div className="p-16 text-center text-[#6B7280]">
+              <Film className="w-10 h-10 mx-auto text-neutral-300 mb-3" />
+              <p className="text-base font-semibold text-[#111111]">No videos created yet</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs sm:text-sm">
+              <table className="w-full text-left rtl:text-right text-xs sm:text-sm">
                 <thead className="bg-[#FAFAFA] border-b border-neutral-200 text-[#6B7280] uppercase tracking-wider text-[11px] font-semibold">
                   <tr>
-                    <th className="px-6 py-3.5">Video</th>
+                    <th className="px-6 py-3.5">{t('admin.videos.thumbnailLabel')}</th>
+                    <th className="px-6 py-3.5">{t('admin.videos.titleLabel')}</th>
+                    <th className="px-6 py-3.5">{t('admin.videos.durationLabel')}</th>
                     <th className="px-6 py-3.5">Source</th>
-                    <th className="px-6 py-3.5">Duration</th>
-                    <th className="px-6 py-3.5">Status</th>
-                    <th className="px-6 py-3.5">Created</th>
-                    <th className="px-6 py-3.5 text-right">Actions</th>
+                    <th className="px-6 py-3.5">{t('admin.users.status')}</th>
+                    <th className="px-6 py-3.5">{t('admin.payments.date')}</th>
+                    <th className="px-6 py-3.5 text-right rtl:text-left">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100">
                   {videos.map((vid) => (
                     <tr key={vid.id} className="hover:bg-neutral-50/60 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-16 h-10 rounded-lg bg-neutral-900 overflow-hidden flex-shrink-0 relative">
-                            {vid.thumbnail_path ? (
-                              <img
-                                src={vid.thumbnail_path}
-                                alt={vid.title}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-neutral-500">
-                                <Film className="w-4 h-4" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="min-w-0 max-w-sm">
-                            <h4 className="font-semibold text-[#111111] truncate">{vid.title}</h4>
-                            <p className="text-xs text-[#6B7280] truncate">
-                              {vid.description || 'No description provided.'}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${sourceBadge(vid.video_source)}`}>
-                          {sourceLabel(vid.video_source)}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1 font-mono text-xs text-[#111111] bg-neutral-100 px-2 py-0.5 rounded">
-                          <Clock className="w-3 h-3 text-[#6B7280]" />
-                          {vid.duration || '00:00'}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleTogglePublish(vid)}
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors cursor-pointer ${
-                              vid.is_published
-                                ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                                : 'bg-neutral-100 text-[#6B7280] hover:bg-neutral-200'
-                            }`}
-                          >
-                            {vid.is_published ? (
-                              <>
-                                <Eye className="w-3 h-3" />
-                                <span>Published</span>
-                              </>
-                            ) : (
-                              <>
-                                <EyeOff className="w-3 h-3" />
-                                <span>Draft</span>
-                              </>
-                            )}
-                          </button>
-
-                          {vid.is_free_preview && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-[#B8860B] border border-amber-200">
-                              <Sparkles className="w-2.5 h-2.5" />
-                              <span>Preview</span>
-                            </span>
+                      <td className="px-6 py-3">
+                        <div className="w-20 h-12 rounded-lg bg-neutral-900 overflow-hidden relative border border-neutral-200 flex-shrink-0">
+                          {vid.thumbnail_path ? (
+                            <img
+                              src={vid.thumbnail_path}
+                              alt={vid.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-neutral-500">
+                              <Film className="w-5 h-5" />
+                            </div>
                           )}
                         </div>
                       </td>
 
-                      <td className="px-6 py-4 text-[#6B7280] whitespace-nowrap text-xs">
-                        {formatDate(vid.created_at)}
+                      <td className="px-6 py-3 font-semibold text-[#111111] max-w-xs">
+                        <div className="truncate">{vid.title}</div>
+                        {vid.description && (
+                          <div className="text-xs text-[#6B7280] font-normal truncate mt-0.5">
+                            {vid.description}
+                          </div>
+                        )}
                       </td>
 
-                      <td className="px-6 py-4 text-right whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1.5">
+                      <td className="px-6 py-3 font-mono text-xs text-[#6B7280] whitespace-nowrap force-ltr">
+                        {vid.duration || '00:00'}
+                      </td>
+
+                      <td className="px-6 py-3 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${sourceBadge(vid.video_source)}`}>
+                          <Play className="w-2.5 h-2.5" />
+                          <span>{sourceLabel(vid.video_source)}</span>
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-3 whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => handleTogglePublish(vid)}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
+                            vid.is_published
+                              ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                              : 'bg-neutral-100 text-[#6B7280] hover:bg-neutral-200'
+                          }`}
+                        >
+                          {vid.is_published ? (
+                            <>
+                              <Eye className="w-3 h-3 text-emerald-600" />
+                              <span>{t('admin.videos.published')}</span>
+                            </>
+                          ) : (
+                            <>
+                              <EyeOff className="w-3 h-3 text-neutral-500" />
+                              <span>{t('admin.videos.draft')}</span>
+                            </>
+                          )}
+                        </button>
+                      </td>
+
+                      <td className="px-6 py-3 text-[#6B7280] whitespace-nowrap force-ltr">
+                        {formatDate(vid.created_at, i18n.language)}
+                      </td>
+
+                      <td className="px-6 py-3 text-right rtl:text-left whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1">
                           <button
                             type="button"
                             onClick={() => handleOpenEditForm(vid)}
-                            className="p-1.5 rounded-lg border border-neutral-200 hover:bg-neutral-100 text-[#6B7280] hover:text-[#111111] transition-colors cursor-pointer"
-                            title="Edit Video"
+                            className="p-1.5 text-[#6B7280] hover:text-[#111111] hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
+                            title={t('admin.videos.edit')}
                           >
                             <Edit3 className="w-4 h-4" />
                           </button>
                           <button
                             type="button"
                             onClick={() => setConfirmDeleteVideo(vid)}
-                            className="p-1.5 rounded-lg border border-rose-200 bg-rose-50/50 hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer"
-                            title="Delete Video"
+                            className="p-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            title={t('admin.videos.delete')}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -702,151 +659,164 @@ export const AdminVideos: React.FC = () => {
         </div>
       )}
 
-      {/* Full-Page (mobile) / Modal (desktop) Add / Edit Form */}
+      {/* Sticky Mobile "Add new video" Button */}
+      <div
+        className="md:hidden fixed bottom-[68px] right-4 rtl:right-auto rtl:left-4 z-30"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <button
+          type="button"
+          onClick={handleOpenAddForm}
+          className="min-h-[48px] px-5 py-3 rounded-full bg-[#111111] text-white text-sm font-semibold shadow-soft-lg flex items-center gap-2 hover:bg-neutral-800 transition-colors cursor-pointer"
+          aria-label="Add new video"
+        >
+          <Plus className="w-5 h-5" />
+          <span>{t('admin.videos.addNew')}</span>
+        </button>
+      </div>
+
+      {/* Add / Edit Form: Full Page on Mobile, Modal on Desktop */}
       {isFormOpen && (
         <div
-          className="fixed inset-0 z-50 bg-white md:bg-black/60 md:backdrop-blur-xs md:flex md:items-center md:justify-center md:p-4 overflow-y-auto animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs md:flex md:items-center md:justify-center md:p-4 animate-in fade-in duration-200"
           role="dialog"
           aria-modal="true"
         >
-          <div className="min-h-full md:min-h-0 bg-white md:rounded-3xl md:border md:border-neutral-200 md:max-w-2xl w-full md:shadow-2xl flex flex-col">
-            {/* Sticky Header */}
-            <div
-              className="sticky top-0 z-10 bg-white/95 backdrop-blur-md px-4 sm:px-8 py-4 border-b border-neutral-100 flex items-center justify-between gap-3"
-              style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
-            >
-              <div>
-                <h3 className="text-lg sm:text-xl font-bold text-[#111111] tracking-tight">
-                  {editingVideo ? 'Edit Video' : 'Add New Video'}
-                </h3>
-                <p className="text-xs text-[#6B7280] mt-0.5">
-                  {editingVideo
-                    ? 'Update lesson details, media, or status'
-                    : 'Create a new video lesson for members'}
-                </p>
+          <div
+            className="w-full min-h-screen md:min-h-0 md:max-w-2xl bg-white md:rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="sticky top-0 bg-white/95 backdrop-blur-md px-4 sm:px-8 py-4 border-b border-neutral-100 flex items-center justify-between z-10">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-neutral-100 flex items-center justify-center text-[#111111]">
+                  <Film className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-[#111111]">
+                    {editingVideo ? t('admin.videos.edit') : t('admin.videos.addNew')}
+                  </h2>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={handleCloseForm}
                 disabled={submitting}
-                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-neutral-500 hover:text-[#111111] hover:bg-neutral-100 transition-colors cursor-pointer"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[#6B7280] hover:text-[#111111] hover:bg-neutral-100 rounded-xl transition-colors cursor-pointer"
                 aria-label="Close form"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
-              <div className="flex-1 p-4 sm:p-8 space-y-5">
+            {/* Form Body */}
+            <form onSubmit={handleSubmitForm} className="flex-1 flex flex-col justify-between">
+              <div className="p-4 sm:p-8 space-y-5 overflow-y-auto max-h-[calc(100vh-140px)] md:max-h-[72vh]">
                 {formError && (
-                  <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2.5">
-                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <div className="leading-relaxed font-medium">{formError}</div>
+                  <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-700 flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span>{formError}</span>
                   </div>
                 )}
 
                 {/* Title */}
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-[#111111] mb-1.5">
-                    Title
+                    {t('admin.videos.titleLabel')} *
                   </label>
                   <input
                     type="text"
                     required
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Understanding Confidence"
-                    className="w-full min-h-[44px] px-4 py-2.5 bg-[#FAFAFA] border border-neutral-200 rounded-xl text-[16px] md:text-sm text-[#111111] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#111111] transition-all"
+                    placeholder="e.g. Mastering Female Psychology in Conflict"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-[#FAFAFA] border border-neutral-200 rounded-xl text-[16px] md:text-sm text-[#111111] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#111111] transition-all"
                   />
                 </div>
 
                 {/* Description */}
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-[#111111] mb-1.5">
-                    Description
+                    {t('admin.videos.descriptionLabel')}
                   </label>
                   <textarea
-                    rows={5}
+                    rows={4}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Summarize this lesson's key ideas and takeaways..."
-                    className="w-full p-4 bg-[#FAFAFA] border border-neutral-200 rounded-xl text-[16px] md:text-sm text-[#111111] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#111111] transition-all leading-relaxed"
+                    placeholder="Detailed overview of what members will learn in this lesson..."
+                    className="w-full p-3.5 bg-[#FAFAFA] border border-neutral-200 rounded-xl text-[16px] md:text-sm text-[#111111] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#111111] transition-all"
                   />
                 </div>
 
-                {/* Video URL (Bunny embed link) & Duration */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#111111] mb-1.5">
-                      Video URL (Bunny embed link)
+                {/* Video URL (Bunny embed link) */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#111111]">
+                      {t('admin.videos.videoUrlLabel')}
                     </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#6B7280]">
-                        <LinkIcon className="w-4 h-4" />
-                      </div>
-                      <input
-                        type="text"
-                        value={videoUrl}
-                        onChange={(e) => handleVideoUrlChange(e.target.value)}
-                        placeholder="https://iframe.mediadelivery.net/embed/LIBRARY_ID/VIDEO_ID"
-                        className={`w-full min-h-[44px] pl-10 pr-4 py-2.5 bg-[#FAFAFA] border rounded-xl text-[16px] md:text-sm text-[#111111] focus:bg-white focus:outline-none focus:ring-2 transition-all ${
-                          urlError
-                            ? 'border-rose-300 focus:ring-rose-500'
-                            : detectedSource
-                              ? 'border-emerald-300 focus:ring-emerald-500'
-                              : 'border-neutral-200 focus:ring-[#111111]'
-                        }`}
-                      />
-                    </div>
-
-                    {/* URL validation feedback */}
-                    {urlError && (
-                      <p className="mt-1.5 text-xs text-rose-600 flex items-start gap-1.5">
-                        <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                        <span>{urlError}</span>
-                      </p>
-                    )}
-                    {!urlError && detectedSource && (
-                      <p className="mt-1.5 text-xs text-emerald-600 flex items-center gap-1.5">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${sourceBadge(detectedSource)}`}>
-                          {sourceLabel(detectedSource)}
-                        </span>
-                        <span className="text-[#6B7280]">embed link detected</span>
-                      </p>
-                    )}
-                    {!urlError && !detectedSource && videoUrl.trim() === '' && (
-                      <p className="mt-1.5 text-[11px] text-[#6B7280]">
-                        Accepts Bunny Stream, YouTube, and Vimeo links. Paste an &lt;iframe&gt; code and the URL will be extracted automatically.
-                      </p>
+                    {detectedSource && (
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${sourceBadge(detectedSource)}`}>
+                        <Play className="w-2.5 h-2.5" />
+                        <span>Detected: {sourceLabel(detectedSource)}</span>
+                      </span>
                     )}
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#111111] mb-1.5">
-                      Duration (mm:ss)
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#6B7280]">
-                        <Clock className="w-4 h-4" />
-                      </div>
-                      <input
-                        type="text"
-                        value={duration}
-                        onChange={(e) => setDuration(e.target.value)}
-                        placeholder="08:30"
-                        className="w-full min-h-[44px] pl-10 pr-4 py-2.5 font-mono bg-[#FAFAFA] border border-neutral-200 rounded-xl text-[16px] md:text-sm text-[#111111] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#111111] transition-all"
-                      />
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 pl-3.5 rtl:pl-0 rtl:pr-3.5 flex items-center pointer-events-none text-[#6B7280]">
+                      <LinkIcon className="w-4 h-4" />
                     </div>
+                    <input
+                      type="text"
+                      value={videoUrl}
+                      onChange={(e) => handleVideoUrlChange(e.target.value)}
+                      placeholder="https://iframe.mediadelivery.net/embed/LIBRARY_ID/VIDEO_ID"
+                      className={`w-full min-h-[44px] pl-10 pr-3.5 rtl:pl-3.5 rtl:pr-10 py-2.5 bg-[#FAFAFA] border rounded-xl text-[16px] md:text-sm text-[#111111] focus:bg-white focus:outline-none focus:ring-2 transition-all force-ltr ${
+                        urlError
+                          ? 'border-rose-400 focus:ring-rose-500'
+                          : 'border-neutral-200 focus:ring-[#111111]'
+                      }`}
+                    />
+                  </div>
+                  {urlError ? (
+                    <p className="text-xs text-rose-600 mt-1.5 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>{urlError}</span>
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-[#6B7280] mt-1.5">
+                      Accepts Bunny embed links, YouTube or Vimeo URLs, or full &lt;iframe&gt; embed code.
+                    </p>
+                  )}
+                </div>
+
+                {/* Duration */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#111111] mb-1.5">
+                    {t('admin.videos.durationLabel')} *
+                  </label>
+                  <div className="relative w-40">
+                    <div className="absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 pl-3.5 rtl:pl-0 rtl:pr-3.5 flex items-center pointer-events-none text-[#6B7280]">
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      value={duration}
+                      onChange={(e) => setDuration(e.target.value)}
+                      placeholder="12:45"
+                      pattern="^\d{1,3}:[0-5]\d$"
+                      className="w-full min-h-[44px] pl-10 pr-3.5 rtl:pl-3.5 rtl:pr-10 py-2.5 bg-[#FAFAFA] border border-neutral-200 rounded-xl text-[16px] md:text-sm text-[#111111] font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#111111] transition-all force-ltr"
+                    />
                   </div>
                 </div>
 
-                {/* Live Video Preview */}
+                {/* Live Video Embed Preview */}
                 {previewEmbedUrl && (
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#111111] mb-1.5">
-                      Video Preview
-                    </label>
-                    <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden border border-neutral-200 shadow-soft">
+                    <span className="block text-xs font-semibold uppercase tracking-wider text-[#111111] mb-1.5">
+                      Live Video Preview
+                    </span>
+                    <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black shadow-md border border-neutral-200">
                       <iframe
                         src={previewEmbedUrl}
                         loading="lazy"
@@ -859,23 +829,10 @@ export const AdminVideos: React.FC = () => {
                   </div>
                 )}
 
-                {/* Direct Video File Upload (Kept for fallback/reference but hidden since videos use Bunny Stream) */}
-                <div className="hidden" aria-hidden="true">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#111111] mb-1.5">
-                    Direct Video Upload (Legacy 50MB max)
-                  </label>
-                  <input
-                    type="file"
-                    accept="video/*"
-                    className="hidden"
-                    id="admin-legacy-video-file-input"
-                  />
-                </div>
-
                 {/* Thumbnail Upload */}
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-[#111111] mb-1.5">
-                    Thumbnail Upload
+                    {t('admin.videos.thumbnailLabel')}
                   </label>
                   <input
                     ref={thumbInputRef}
@@ -901,7 +858,7 @@ export const AdminVideos: React.FC = () => {
                             setThumbPreviewUrl(null);
                             if (thumbInputRef.current) thumbInputRef.current.value = '';
                           }}
-                          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/70 text-white flex items-center justify-center cursor-pointer"
+                          className="absolute top-1 right-1 rtl:right-auto rtl:left-1 w-6 h-6 rounded-full bg-black/70 text-white flex items-center justify-center cursor-pointer"
                           aria-label="Remove thumbnail"
                         >
                           <X className="w-3.5 h-3.5" />
@@ -930,8 +887,8 @@ export const AdminVideos: React.FC = () => {
                 {uploadProgress !== null && (
                   <div className="space-y-2 p-4 rounded-xl bg-neutral-50 border border-neutral-200">
                     <div className="flex justify-between text-xs text-[#111111] font-semibold">
-                      <span>Saving...</span>
-                      <span>{uploadProgress}%</span>
+                      <span>{t('common.pleaseWait')}</span>
+                      <span className="force-ltr">{uploadProgress}%</span>
                     </div>
                     <div className="w-full h-2 rounded-full bg-neutral-200 overflow-hidden">
                       <div
@@ -947,7 +904,7 @@ export const AdminVideos: React.FC = () => {
                   <div className="flex items-center justify-between gap-3 p-3.5 rounded-xl border border-neutral-200/80 bg-[#FAFAFA]">
                     <div>
                       <span className="text-xs font-semibold text-[#111111] block">
-                        {isPublished ? 'Published' : 'Draft'}
+                        {isPublished ? t('admin.videos.published') : t('admin.videos.draft')}
                       </span>
                       <span className="text-[11px] text-[#6B7280] block">
                         {isPublished ? 'Visible to members' : 'Hidden from members'}
@@ -1001,7 +958,7 @@ export const AdminVideos: React.FC = () => {
                 </div>
               </div>
 
-              {/* Sticky Bottom Form Footer: Publish & Cancel */}
+              {/* Sticky Bottom Form Footer */}
               <div
                 className="sticky bottom-0 bg-white/95 backdrop-blur-md px-4 sm:px-8 py-4 border-t border-neutral-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5"
                 style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
@@ -1012,7 +969,7 @@ export const AdminVideos: React.FC = () => {
                   disabled={submitting}
                   className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-xl border border-neutral-200 text-sm md:text-xs font-semibold text-[#111111] hover:bg-neutral-50 cursor-pointer"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
@@ -1022,10 +979,10 @@ export const AdminVideos: React.FC = () => {
                   {submitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin text-white" />
-                      <span>Saving...</span>
+                      <span>{t('common.pleaseWait')}</span>
                     </>
                   ) : (
-                    <span>{isPublished ? 'Publish' : 'Save Draft'}</span>
+                    <span>{isPublished ? t('admin.videos.publish') : t('common.save')}</span>
                   )}
                 </button>
               </div>
@@ -1037,13 +994,13 @@ export const AdminVideos: React.FC = () => {
       {/* Delete Video Confirmation */}
       <AdminConfirmDialog
         isOpen={Boolean(confirmDeleteVideo)}
-        title="Delete this video?"
+        title={t('admin.videos.deleteConfirm')}
         description={
           confirmDeleteVideo
             ? `Permanently delete "${confirmDeleteVideo.title}"? This cannot be undone.`
             : ''
         }
-        confirmLabel="Delete"
+        confirmLabel={t('admin.videos.delete')}
         variant="danger"
         loading={deleting}
         onConfirm={handleConfirmDelete}

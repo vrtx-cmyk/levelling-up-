@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../context/ToastContext';
 import { formatDate, formatCurrency } from '../../lib/utils';
@@ -27,6 +28,8 @@ interface AdminPaymentsProps {
 }
 
 export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
+  const { t, i18n } = useTranslation();
+
   const [payments, setPayments] = useState<Payment[]>([]);
   const [thumbUrls, setThumbUrls] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -38,13 +41,11 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
     refCode?: string;
   } | null>(null);
 
-  // Confirm Approve Modal & Reject Bottom Sheet state
   const [confirmApprovePayment, setConfirmApprovePayment] = useState<Payment | null>(null);
   const [rejectModalPayment, setRejectModalPayment] = useState<Payment | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // Pull-to-refresh touch tracking on mobile
   const [pullOffset, setPullOffset] = useState(0);
   const touchStartYRef = useRef<number | null>(null);
 
@@ -67,7 +68,6 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
         const list = data as Payment[];
         setPayments(list);
 
-        // Pre-resolve receipt thumbnails in the background for mobile cards
         const entries = await Promise.all(
           list
             .filter((p) => Boolean(p.screenshot_path))
@@ -119,20 +119,19 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
     if (pullOffset >= 52 && !loading) {
       loadPayments();
     }
-    touchStartYRef.current = null;
     setPullOffset(0);
+    touchStartYRef.current = null;
   };
 
   const handleViewReceipt = async (pay: Payment) => {
     try {
-      const resolvedUrl = thumbUrls[pay.id] || (await resolveReceiptUrl(pay.screenshot_path));
+      const resolvedUrl = await resolveReceiptUrl(pay.screenshot_path);
       setSelectedReceipt({
         url: resolvedUrl,
         userName: pay.profile?.full_name || pay.profile?.email,
         refCode: pay.profile?.reference_code,
       });
     } catch (err: any) {
-      console.error('[AdminPayments] Receipt open error:', err);
       error(err.message || 'Failed to open receipt.');
     }
   };
@@ -144,11 +143,11 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
     try {
       await approvePaymentRequest(target);
       success(
-        `Payment approved for ${target.profile?.full_name || target.profile?.email || 'Member'}. Access granted!`
+        `Payment approved for ${target.profile?.full_name || target.profile?.email || 'User'}. Access granted!`
       );
       setConfirmApprovePayment(null);
       await loadPayments();
-      onRefresh?.();
+      if (onRefresh) onRefresh();
     } catch (err: any) {
       console.error('[AdminPayments] Approve error:', err);
       error(err.message || 'Failed to approve payment.');
@@ -167,7 +166,7 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
       setRejectModalPayment(null);
       setRejectReason('');
       await loadPayments();
-      onRefresh?.();
+      if (onRefresh) onRefresh();
     } catch (err: any) {
       console.error('[AdminPayments] Reject error:', err);
       error(err.message || 'Failed to reject payment.');
@@ -176,15 +175,11 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
     }
   };
 
-  const pendingCount = payments.filter((p) => p.status === 'pending').length;
-  const approvedCount = payments.filter((p) => p.status === 'approved').length;
-  const rejectedCount = payments.filter((p) => p.status === 'rejected').length;
-
   const counts = {
-    pending: pendingCount,
-    approved: approvedCount,
-    rejected: rejectedCount,
     all: payments.length,
+    pending: payments.filter((p) => p.status === 'pending').length,
+    approved: payments.filter((p) => p.status === 'approved').length,
+    rejected: payments.filter((p) => p.status === 'rejected').length,
   };
 
   const filteredPayments = payments.filter((p) => {
@@ -192,28 +187,30 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
     return p.status === statusFilter;
   });
 
+  const pendingCount = counts.pending;
+
   const emptyMessage =
     statusFilter === 'pending'
-      ? 'No pending payments'
+      ? t('admin.payments.noPending')
       : statusFilter === 'approved'
-        ? 'No approved payments'
-        : statusFilter === 'rejected'
-          ? 'No rejected payments'
-          : 'No payment requests';
+      ? t('admin.payments.noApproved')
+      : statusFilter === 'rejected'
+      ? t('admin.payments.noRejected')
+      : 'No payment requests';
 
-  const statusBadge = (status: Payment['status']) => (
+  const statusBadge = (st: Payment['status']) => (
     <span
       className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${
-        status === 'approved'
+        st === 'approved'
           ? 'bg-emerald-50 text-emerald-700'
-          : status === 'rejected'
-            ? 'bg-rose-50 text-rose-700'
-            : 'bg-amber-50 text-amber-800'
+          : st === 'rejected'
+          ? 'bg-rose-50 text-rose-700'
+          : 'bg-amber-50 text-amber-800'
       }`}
     >
-      {status === 'approved' && <CheckCircle2 className="w-3.5 h-3.5" />}
-      {status === 'rejected' && <XCircle className="w-3.5 h-3.5" />}
-      <span>{status}</span>
+      {st === 'approved' && <CheckCircle2 className="w-3.5 h-3.5" />}
+      {st === 'rejected' && <XCircle className="w-3.5 h-3.5" />}
+      <span>{st === 'approved' ? t('admin.payments.approved') : st === 'rejected' ? t('admin.payments.rejected') : t('admin.payments.pending')}</span>
     </span>
   );
 
@@ -238,11 +235,11 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
           <div>
             <div className="hidden md:flex items-center gap-3">
               <h1 className="text-2xl font-bold tracking-tight text-[#111111]">
-                Payments
+                {t('admin.payments.title')}
               </h1>
               {pendingCount > 0 && (
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
-                  {pendingCount} Pending
+                  {pendingCount} {t('admin.payments.pending')}
                 </span>
               )}
             </div>
@@ -259,7 +256,7 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
             aria-label="Refresh payments"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
+            <span>{t('common.retry')}</span>
           </button>
         </div>
 
@@ -276,7 +273,7 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
                   : 'text-[#6B7280] hover:text-[#111111]'
               }`}
             >
-              {st} ({counts[st]})
+              {st === 'all' ? 'All' : t(`admin.payments.${st}`)} ({counts[st]})
             </button>
           ))}
           <button
@@ -290,7 +287,7 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
         </div>
       </div>
 
-      {/* Mobile Filter Tabs with Counters (Pending / Approved / Rejected) */}
+      {/* Mobile Filter Tabs with Counters */}
       <div className="md:hidden grid grid-cols-3 gap-1.5 p-1 bg-neutral-100 rounded-2xl">
         {(['pending', 'approved', 'rejected'] as const).map((st) => {
           const active = statusFilter === st;
@@ -305,9 +302,9 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
                   : 'text-[#6B7280] hover:text-[#111111]'
               }`}
             >
-              <span>{st}</span>
+              <span>{t(`admin.payments.${st}`)}</span>
               <span
-                className={`px-1.5 py-0.5 rounded-full text-[11px] font-bold ${
+                className={`px-1.5 py-0.5 rounded-full text-[11px] font-bold force-ltr ${
                   active ? 'bg-[#111111] text-white' : 'bg-neutral-200/80 text-[#6B7280]'
                 }`}
               >
@@ -328,7 +325,7 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
             onClick={loadPayments}
             className="min-h-[44px] px-5 py-2.5 rounded-xl bg-[#111111] text-white text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer"
           >
-            Retry
+            {t('common.retry')}
           </button>
         </div>
       )}
@@ -363,9 +360,6 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
             <div className="bg-white rounded-2xl border border-neutral-200/90 p-10 text-center text-[#6B7280] shadow-soft">
               <CreditCard className="w-8 h-8 mx-auto text-neutral-300 mb-2" />
               <p className="text-sm font-semibold text-[#111111]">{emptyMessage}</p>
-              <p className="text-xs text-[#6B7280] mt-1">
-                New submissions will appear here automatically.
-              </p>
             </div>
           ) : (
             filteredPayments.map((pay) => {
@@ -376,36 +370,34 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
                   data-payment-card={pay.id}
                   className="bg-white rounded-2xl border border-neutral-200/90 p-4 shadow-soft space-y-3.5"
                 >
-                  {/* Top Row: Name + Status */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <h3 className="text-base font-bold text-[#111111] break-words">
                         {pay.profile?.full_name || 'Member'}
                       </h3>
-                      <p className="text-xs text-[#6B7280] break-all mt-0.5">
+                      <p className="text-xs text-[#6B7280] break-all mt-0.5 force-ltr">
                         {pay.profile?.email || 'N/A'}
                       </p>
                     </div>
                     <div className="flex-shrink-0">{statusBadge(pay.status)}</div>
                   </div>
 
-                  {/* Metadata Details */}
                   <div className="grid grid-cols-2 gap-2.5 p-3 rounded-xl bg-[#FAFAFA] border border-neutral-100 text-xs">
                     <div>
-                      <span className="text-[#6B7280] block">Amount</span>
-                      <span className="font-bold text-[#111111] text-sm">
+                      <span className="text-[#6B7280] block">{t('admin.payments.amount')}</span>
+                      <span className="font-bold text-[#111111] text-sm force-ltr">
                         {formatCurrency(pay.amount)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[#6B7280] block">Date</span>
-                      <span className="font-medium text-[#111111]">
-                        {formatDate(pay.created_at)}
+                      <span className="text-[#6B7280] block">{t('admin.payments.date')}</span>
+                      <span className="font-medium text-[#111111] force-ltr">
+                        {formatDate(pay.created_at, i18n.language)}
                       </span>
                     </div>
                     <div className="col-span-2 pt-1 border-t border-neutral-200/60 flex items-center justify-between gap-2">
-                      <span className="text-[#6B7280]">Reference code</span>
-                      <span className="font-mono font-semibold text-[#111111] bg-white px-2 py-0.5 rounded border border-neutral-200">
+                      <span className="text-[#6B7280]">{t('admin.payments.reference')}</span>
+                      <span className="font-mono font-semibold text-[#111111] bg-white px-2 py-0.5 rounded border border-neutral-200 force-ltr">
                         {pay.profile?.reference_code || 'No code'}
                       </span>
                     </div>
@@ -415,7 +407,7 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
                   <button
                     type="button"
                     onClick={() => handleViewReceipt(pay)}
-                    className="w-full min-h-[44px] relative rounded-xl overflow-hidden border border-neutral-200 bg-neutral-100 group text-left cursor-pointer"
+                    className="w-full min-h-[44px] relative rounded-xl overflow-hidden border border-neutral-200 bg-neutral-100 group text-left rtl:text-right cursor-pointer"
                     aria-label="View payment screenshot"
                   >
                     {previewSrc ? (
@@ -426,7 +418,7 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
                           className="w-full h-full object-cover opacity-95 group-hover:opacity-100 transition-opacity"
                         />
                         <div className="absolute inset-x-0 bottom-0 px-3 py-2 bg-gradient-to-t from-black/75 to-transparent flex items-center justify-between text-white text-xs font-medium">
-                          <span>Tap to zoom receipt</span>
+                          <span>{t('admin.payments.viewScreenshot')}</span>
                           <ZoomIn className="w-4 h-4" />
                         </div>
                       </div>
@@ -434,7 +426,7 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
                       <div className="px-4 py-3 flex items-center justify-between text-xs font-semibold text-[#111111]">
                         <span className="inline-flex items-center gap-2">
                           <Eye className="w-4 h-4 text-[#6B7280]" />
-                          <span>View payment screenshot</span>
+                          <span>{t('admin.payments.viewScreenshot')}</span>
                         </span>
                         <ZoomIn className="w-4 h-4 text-[#6B7280]" />
                       </div>
@@ -447,7 +439,6 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
                     </div>
                   )}
 
-                  {/* Full-width Approve / Reject buttons */}
                   {pay.status === 'pending' && (
                     <div className="grid grid-cols-1 gap-2.5 pt-1">
                       <button
@@ -461,7 +452,7 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
                         ) : (
                           <CheckCircle2 className="w-4 h-4" />
                         )}
-                        <span>Approve</span>
+                        <span>{t('admin.payments.approve')}</span>
                       </button>
                       <button
                         type="button"
@@ -473,7 +464,7 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
                         className="w-full min-h-[44px] py-2.5 px-4 rounded-xl border border-neutral-300 bg-white hover:bg-neutral-50 text-[#111111] text-sm font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 cursor-pointer"
                       >
                         <XCircle className="w-4 h-4 text-rose-600" />
-                        <span>Reject</span>
+                        <span>{t('admin.payments.reject')}</span>
                       </button>
                     </div>
                   )}
@@ -490,27 +481,24 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
           {loading ? (
             <div className="p-12 text-center text-[#6B7280] flex flex-col items-center gap-2">
               <Loader2 className="w-6 h-6 animate-spin text-[#111111]" />
-              <span className="text-xs">Loading payments...</span>
+              <span className="text-xs">{t('common.loading')}</span>
             </div>
           ) : filteredPayments.length === 0 ? (
             <div className="p-12 text-center text-[#6B7280]">
               <CreditCard className="w-8 h-8 mx-auto text-neutral-300 mb-2" />
               <p className="text-sm font-semibold text-[#111111]">{emptyMessage}</p>
-              <p className="text-xs text-[#6B7280] mt-0.5">
-                New submissions will appear here automatically.
-              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs sm:text-sm">
+              <table className="w-full text-left rtl:text-right text-xs sm:text-sm">
                 <thead className="bg-[#FAFAFA] border-b border-neutral-200 text-[#6B7280] uppercase tracking-wider text-[11px] font-semibold">
                   <tr>
-                    <th className="px-6 py-3.5">Name</th>
-                    <th className="px-6 py-3.5">Email</th>
-                    <th className="px-6 py-3.5">Amount</th>
-                    <th className="px-6 py-3.5">Date</th>
-                    <th className="px-6 py-3.5 text-center">Receipt</th>
-                    <th className="px-6 py-3.5 text-right">Action</th>
+                    <th className="px-6 py-3.5">{t('admin.videos.titleLabel')}</th>
+                    <th className="px-6 py-3.5">{t('auth.emailLabel')}</th>
+                    <th className="px-6 py-3.5">{t('admin.payments.amount')}</th>
+                    <th className="px-6 py-3.5">{t('admin.payments.date')}</th>
+                    <th className="px-6 py-3.5 text-center">{t('admin.payments.viewScreenshot')}</th>
+                    <th className="px-6 py-3.5 text-right rtl:text-left">{t('common.confirm')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100">
@@ -518,21 +506,21 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
                     <tr key={pay.id} className="hover:bg-neutral-50/60 transition-colors">
                       <td className="px-6 py-4 font-semibold text-[#111111]">
                         <div>{pay.profile?.full_name || 'Member'}</div>
-                        <div className="font-mono text-[11px] text-[#6B7280] mt-0.5">
+                        <div className="font-mono text-[11px] text-[#6B7280] mt-0.5 force-ltr">
                           {pay.profile?.reference_code || 'No code'}
                         </div>
                       </td>
 
-                      <td className="px-6 py-4 text-[#6B7280]">
+                      <td className="px-6 py-4 text-[#6B7280] force-ltr">
                         {pay.profile?.email || 'N/A'}
                       </td>
 
-                      <td className="px-6 py-4 font-semibold text-[#111111]">
+                      <td className="px-6 py-4 font-semibold text-[#111111] force-ltr">
                         {formatCurrency(pay.amount)}
                       </td>
 
-                      <td className="px-6 py-4 text-[#6B7280] whitespace-nowrap">
-                        {formatDate(pay.created_at)}
+                      <td className="px-6 py-4 text-[#6B7280] whitespace-nowrap force-ltr">
+                        {formatDate(pay.created_at, i18n.language)}
                       </td>
 
                       <td className="px-6 py-4 text-center">
@@ -548,7 +536,7 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
                         </button>
                       </td>
 
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4 text-right rtl:text-left">
                         {pay.status === 'pending' ? (
                           <div className="inline-flex items-center gap-2">
                             <button
@@ -562,7 +550,7 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
                               ) : (
                                 <CheckCircle2 className="w-3.5 h-3.5" />
                               )}
-                              <span>Approve</span>
+                              <span>{t('admin.payments.approve')}</span>
                             </button>
                             <button
                               type="button"
@@ -574,7 +562,7 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
                               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-semibold border border-rose-200 transition-colors disabled:opacity-50 cursor-pointer"
                             >
                               <XCircle className="w-3.5 h-3.5" />
-                              <span>Reject</span>
+                              <span>{t('admin.payments.reject')}</span>
                             </button>
                           </div>
                         ) : (
@@ -604,17 +592,17 @@ export const AdminPayments: React.FC<AdminPaymentsProps> = ({ onRefresh }) => {
       {/* Approve Confirmation Dialog */}
       <AdminConfirmDialog
         isOpen={Boolean(confirmApprovePayment)}
-        title="Approve this payment?"
+        title={t('admin.payments.approveConfirm')}
         description={
           confirmApprovePayment
             ? `Grant full membership access to ${
                 confirmApprovePayment.profile?.full_name ||
                 confirmApprovePayment.profile?.email ||
                 'this member'
-              } (${confirmApprovePayment.profile?.reference_code || 'No code'})?`
+              }?`
             : ''
         }
-        confirmLabel="Confirm"
+        confirmLabel={t('common.confirm')}
         variant="dark"
         loading={Boolean(confirmApprovePayment && actionLoading === confirmApprovePayment.id)}
         onConfirm={handleConfirmApprove}

@@ -6,17 +6,23 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(amount: number, currency: string = 'MAD'): string {
-  return `${amount.toLocaleString()} ${currency}`;
+  const formatted = new Intl.NumberFormat('en-US', {
+    numberingSystem: 'latn',
+    maximumFractionDigits: 0,
+  }).format(amount);
+  return `${formatted} ${currency}`;
 }
 
-export function formatDate(dateString: string): string {
+export function formatDate(dateString: string, locale: string = 'en'): string {
   try {
     const d = new Date(dateString);
-    return d.toLocaleDateString('en-GB', {
+    const intlLocale = locale === 'ar' ? 'ar-MA-u-nu-latn' : locale === 'fr' ? 'fr-FR-u-nu-latn' : 'en-GB-u-nu-latn';
+    return new Intl.DateTimeFormat(intlLocale, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
-    });
+      numberingSystem: 'latn',
+    }).format(d);
   } catch {
     return dateString;
   }
@@ -46,4 +52,3 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     return false;
   }
 }
-

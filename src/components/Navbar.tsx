@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { Logo } from './Logo';
+import { LanguageSwitcher } from './LanguageSwitcher';
 import {
   ChevronDown,
   LogOut,
@@ -19,6 +21,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onScrollToSection, onContactClick }) => {
+  const { t } = useTranslation();
   const { user, profile, isAdmin, isApproved, signOut } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -87,34 +90,34 @@ export const Navbar: React.FC<NavbarProps> = ({ onScrollToSection, onContactClic
   const getStatusMeta = () => {
     if (isAdmin) {
       return {
-        label: 'Admin',
+        label: t('nav.status.admin'),
         pillClass: 'bg-neutral-900 text-white border border-neutral-900',
         dotClass: 'bg-emerald-400',
       };
     }
     if (isApproved || profile?.status === 'approved') {
       return {
-        label: 'Member',
+        label: t('nav.status.member'),
         pillClass: 'bg-emerald-50 text-emerald-700 border border-emerald-200/80',
         dotClass: 'bg-emerald-500',
       };
     }
     if (profile?.status === 'pending') {
       return {
-        label: 'Pending',
+        label: t('nav.status.pending'),
         pillClass: 'bg-amber-50 text-amber-700 border border-amber-200/80',
         dotClass: 'bg-amber-500 animate-pulse',
       };
     }
     if (profile?.status === 'rejected') {
       return {
-        label: 'Rejected',
+        label: t('nav.status.rejected'),
         pillClass: 'bg-rose-50 text-rose-700 border border-rose-200/80',
         dotClass: 'bg-rose-500',
       };
     }
     return {
-      label: 'Not activated',
+      label: t('nav.status.notActivated'),
       pillClass: 'bg-neutral-100 text-[#6B7280] border border-neutral-200/80',
       dotClass: 'bg-neutral-400',
     };
@@ -147,7 +150,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onScrollToSection, onContactClic
       }`}
     >
       <div className="max-w-[1200px] w-full mx-auto px-[20px] sm:px-6 lg:px-8 h-18 py-3.5 flex items-center justify-between">
-        {/* Left: Logo */}
+        {/* Left: Logo (LTR: left, RTL: right) */}
         <Logo linkTo="/" />
 
         {/* Center/Desktop Nav Links */}
@@ -155,33 +158,33 @@ export const Navbar: React.FC<NavbarProps> = ({ onScrollToSection, onContactClic
           <nav className="hidden md:flex items-center md:gap-4 lg:gap-7 xl:gap-8 text-[14px] lg:text-[15px] font-medium text-[#6B7280]">
             <button
               onClick={() => handleNavClick('lessons')}
-              className="hover:text-[#111111] transition-colors"
+              className="hover:text-[#111111] transition-colors cursor-pointer"
             >
-              Lessons
+              {t('nav.lessons')}
             </button>
             <button
               onClick={() => handleNavClick('how-it-works')}
-              className="hover:text-[#111111] transition-colors"
+              className="hover:text-[#111111] transition-colors cursor-pointer"
             >
-              How it works
+              {t('nav.howItWorks')}
             </button>
             <button
               onClick={() => handleNavClick('reviews')}
-              className="hover:text-[#111111] transition-colors"
+              className="hover:text-[#111111] transition-colors cursor-pointer"
             >
-              Reviews
+              {t('nav.reviews')}
             </button>
             <button
               onClick={() => handleNavClick('faq')}
-              className="hover:text-[#111111] transition-colors"
+              className="hover:text-[#111111] transition-colors cursor-pointer"
             >
-              FAQ
+              {t('nav.faq')}
             </button>
             <button
               onClick={() => handleNavClick('contact')}
-              className="hover:text-[#111111] transition-colors"
+              className="hover:text-[#111111] transition-colors cursor-pointer"
             >
-              Contact
+              {t('nav.contact')}
             </button>
           </nav>
         ) : (
@@ -196,7 +199,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onScrollToSection, onContactClic
                 }`}
               >
                 <PlaySquare className="w-4 h-4 text-[#111111]" />
-                Videos
+                {t('nav.videos')}
               </Link>
             )}
 
@@ -210,22 +213,22 @@ export const Navbar: React.FC<NavbarProps> = ({ onScrollToSection, onContactClic
                 }`}
               >
                 <CreditCard className="w-4 h-4 text-[#B8860B]" />
-                Activate Access
+                {t('nav.activateAccess')}
               </Link>
             )}
 
             <button
               onClick={() => handleNavClick('lessons')}
-              className="text-[#6B7280] hover:text-[#111111] transition-colors text-sm"
+              className="text-[#6B7280] hover:text-[#111111] transition-colors text-sm cursor-pointer"
             >
-              Lessons
+              {t('nav.lessons')}
             </button>
 
             <button
               onClick={() => handleNavClick('faq')}
-              className="text-[#6B7280] hover:text-[#111111] transition-colors text-sm"
+              className="text-[#6B7280] hover:text-[#111111] transition-colors text-sm cursor-pointer"
             >
-              FAQ
+              {t('nav.faq')}
             </button>
 
             {isAdmin && (
@@ -238,27 +241,30 @@ export const Navbar: React.FC<NavbarProps> = ({ onScrollToSection, onContactClic
                 }`}
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
-                Admin Panel
+                {t('nav.adminPanel')}
               </Link>
             )}
           </nav>
         )}
 
-        {/* Right CTA / User Dropdown */}
+        {/* Right CTA / Language Switcher / User Dropdown */}
         <div className="hidden md:flex items-center gap-3 lg:gap-4">
+          {/* Desktop Language Switcher */}
+          <LanguageSwitcher variant="navbar" />
+
           {!user ? (
             <>
               <Link
                 to="/login"
                 className="text-[14px] lg:text-[15px] font-medium text-[#111111] hover:text-black px-3.5 py-2 rounded-lg transition-colors"
               >
-                Log in
+                {t('nav.login')}
               </Link>
               <Link
                 to="/signup"
                 className="text-xs sm:text-sm font-semibold text-white bg-[#111111] hover:bg-neutral-800 px-6 py-2.5 rounded-full transition-all duration-200 shadow-sm hover:shadow hover:-translate-y-0.5 active:translate-y-0"
               >
-                Join now
+                {t('nav.joinNow')}
               </Link>
             </>
           ) : (
@@ -267,22 +273,22 @@ export const Navbar: React.FC<NavbarProps> = ({ onScrollToSection, onContactClic
 
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-2.5 p-1.5 pr-2.5 rounded-full hover:bg-neutral-100 transition-colors focus:outline-none border border-neutral-200/80"
+                className="flex items-center gap-2.5 p-1.5 pr-2.5 rtl:pr-1.5 rtl:pl-2.5 rounded-full hover:bg-neutral-100 transition-colors focus:outline-none border border-neutral-200/80 cursor-pointer"
               >
                 <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#111111] text-white flex items-center justify-center text-xs font-semibold overflow-hidden shadow-xs">
                   {initials}
                 </div>
                 <span className="text-sm font-medium text-[#111111]">
-                  {isAdmin ? 'Admin' : 'My Account'}
+                  {isAdmin ? t('nav.status.admin') : t('nav.myAccount')}
                 </span>
                 <ChevronDown className="w-3.5 h-3.5 text-[#6B7280]" />
               </button>
 
               {dropdownOpen && (
-                <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-soft-lg border border-neutral-100 py-2 z-50 animate-in fade-in slide-in-from-top-2">
+                <div className="absolute right-0 rtl:right-auto rtl:left-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-soft-lg border border-neutral-100 py-2 z-50 animate-in fade-in slide-in-from-top-2">
                   <div className="px-4 py-2.5 border-b border-neutral-100">
-                    <p className="text-xs text-[#6B7280] font-medium">Signed in as</p>
-                    <p className="text-sm font-medium text-[#111111] truncate">
+                    <p className="text-xs text-[#6B7280] font-medium">{t('nav.signedInAs')}</p>
+                    <p className="text-sm font-medium text-[#111111] truncate force-ltr">
                       {profile?.full_name || user.email}
                     </p>
                     <div className="mt-1.5">
@@ -298,7 +304,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onScrollToSection, onContactClic
                         className="flex items-center gap-2 px-4 py-2 text-sm text-[#111111] hover:bg-neutral-50 transition-colors"
                       >
                         <PlaySquare className="w-4 h-4 text-[#6B7280]" />
-                        Video Library
+                        {t('nav.videoLibrary')}
                       </Link>
                     )}
 
@@ -309,7 +315,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onScrollToSection, onContactClic
                         className="flex items-center gap-2 px-4 py-2 text-sm text-[#111111] hover:bg-neutral-50 transition-colors"
                       >
                         <CreditCard className="w-4 h-4 text-[#B8860B]" />
-                        Activate Access
+                        {t('nav.activateAccess')}
                       </Link>
                     )}
 
@@ -319,7 +325,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onScrollToSection, onContactClic
                       className="flex items-center gap-2 px-4 py-2 text-sm text-[#111111] hover:bg-neutral-50 transition-colors"
                     >
                       <UserIcon className="w-4 h-4 text-[#6B7280]" />
-                      My Account
+                      {t('nav.myAccount')}
                     </Link>
 
                     {isAdmin && (
@@ -329,7 +335,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onScrollToSection, onContactClic
                         className="flex items-center gap-2 px-4 py-2 text-sm text-[#111111] hover:bg-neutral-50 transition-colors font-medium"
                       >
                         <ShieldCheck className="w-4 h-4 text-[#111111]" />
-                        Admin Dashboard
+                        {t('nav.adminDashboard')}
                       </Link>
                     )}
                   </div>
@@ -337,10 +343,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onScrollToSection, onContactClic
                   <div className="border-t border-neutral-100 pt-1">
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 transition-colors"
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                     >
                       <LogOut className="w-4 h-4" />
-                      Log out
+                      {t('nav.logOut')}
                     </button>
                   </div>
                 </div>
@@ -365,12 +371,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onScrollToSection, onContactClic
 
       {/* Full-Width Mobile White Panel Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden absolute left-0 right-0 top-full w-full bg-white border-b border-neutral-200 shadow-soft-lg px-[20px] pt-3 pb-6 space-y-1 z-50 max-h-[calc(100vh-70px)] overflow-y-auto animate-in slide-in-from-top-2 duration-200">
+        <div className="md:hidden absolute left-0 right-0 top-full w-full bg-white border-b border-neutral-200 shadow-soft-lg px-[20px] pt-3 pb-6 space-y-2 z-50 max-h-[calc(100vh-70px)] overflow-y-auto animate-in slide-in-from-top-2 duration-200">
+          {/* Mobile Language Switcher at Top */}
+          <LanguageSwitcher variant="mobile" />
+
           {user && (
             <div className="pb-3 mb-2 border-b border-neutral-100 flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs text-[#6B7280]">Signed in as</p>
-                <p className="text-sm font-semibold text-[#111111] truncate">
+                <p className="text-xs text-[#6B7280]">{t('nav.signedInAs')}</p>
+                <p className="text-sm font-semibold text-[#111111] truncate force-ltr">
                   {profile?.full_name || user.email}
                 </p>
               </div>
@@ -382,37 +391,37 @@ export const Navbar: React.FC<NavbarProps> = ({ onScrollToSection, onContactClic
           <button
             type="button"
             onClick={() => handleNavClick('lessons')}
-            className="w-full min-h-[44px] flex items-center text-left text-[16px] font-medium text-[#111111] hover:text-[#B8860B] active:bg-neutral-50 rounded-xl px-1 transition-colors"
+            className="w-full min-h-[44px] flex items-center text-left rtl:text-right text-[16px] font-medium text-[#111111] hover:text-[#B8860B] active:bg-neutral-50 rounded-xl px-1 transition-colors cursor-pointer"
           >
-            Lessons
+            {t('nav.lessons')}
           </button>
           <button
             type="button"
             onClick={() => handleNavClick('how-it-works')}
-            className="w-full min-h-[44px] flex items-center text-left text-[16px] font-medium text-[#111111] hover:text-[#B8860B] active:bg-neutral-50 rounded-xl px-1 transition-colors"
+            className="w-full min-h-[44px] flex items-center text-left rtl:text-right text-[16px] font-medium text-[#111111] hover:text-[#B8860B] active:bg-neutral-50 rounded-xl px-1 transition-colors cursor-pointer"
           >
-            How it works
+            {t('nav.howItWorks')}
           </button>
           <button
             type="button"
             onClick={() => handleNavClick('reviews')}
-            className="w-full min-h-[44px] flex items-center text-left text-[16px] font-medium text-[#111111] hover:text-[#B8860B] active:bg-neutral-50 rounded-xl px-1 transition-colors"
+            className="w-full min-h-[44px] flex items-center text-left rtl:text-right text-[16px] font-medium text-[#111111] hover:text-[#B8860B] active:bg-neutral-50 rounded-xl px-1 transition-colors cursor-pointer"
           >
-            Reviews
+            {t('nav.reviews')}
           </button>
           <button
             type="button"
             onClick={() => handleNavClick('faq')}
-            className="w-full min-h-[44px] flex items-center text-left text-[16px] font-medium text-[#111111] hover:text-[#B8860B] active:bg-neutral-50 rounded-xl px-1 transition-colors"
+            className="w-full min-h-[44px] flex items-center text-left rtl:text-right text-[16px] font-medium text-[#111111] hover:text-[#B8860B] active:bg-neutral-50 rounded-xl px-1 transition-colors cursor-pointer"
           >
-            FAQ
+            {t('nav.faq')}
           </button>
           <button
             type="button"
             onClick={() => handleNavClick('contact')}
-            className="w-full min-h-[44px] flex items-center text-left text-[16px] font-medium text-[#111111] hover:text-[#B8860B] active:bg-neutral-50 rounded-xl px-1 transition-colors"
+            className="w-full min-h-[44px] flex items-center text-left rtl:text-right text-[16px] font-medium text-[#111111] hover:text-[#B8860B] active:bg-neutral-50 rounded-xl px-1 transition-colors cursor-pointer"
           >
-            Contact
+            {t('nav.contact')}
           </button>
 
           {user && (
@@ -423,7 +432,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onScrollToSection, onContactClic
                 className="w-full min-h-[44px] flex items-center gap-2 text-[15px] font-medium text-[#6B7280] hover:text-[#111111] px-1"
               >
                 <UserIcon className="w-4 h-4" />
-                <span>My Account</span>
+                <span>{t('nav.myAccount')}</span>
               </Link>
 
               {isAdmin && (
@@ -433,7 +442,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onScrollToSection, onContactClic
                   className="w-full min-h-[44px] flex items-center gap-2 text-[15px] font-semibold text-[#111111] px-1"
                 >
                   <ShieldCheck className="w-4 h-4" />
-                  <span>Admin Panel</span>
+                  <span>{t('nav.adminPanel')}</span>
                 </Link>
               )}
             </div>
@@ -448,14 +457,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onScrollToSection, onContactClic
                   onClick={() => setMobileMenuOpen(false)}
                   className="w-full min-h-[48px] flex items-center justify-center rounded-full border-[1.5px] border-[#D1D5DB] bg-white hover:bg-neutral-50 active:bg-neutral-100 text-[16px] font-semibold text-[#111111] transition-colors"
                 >
-                  Log in
+                  {t('nav.login')}
                 </Link>
                 <Link
                   to="/signup"
                   onClick={() => setMobileMenuOpen(false)}
                   className="w-full min-h-[52px] flex items-center justify-center rounded-full bg-[#111111] hover:bg-neutral-800 text-white text-[16px] font-semibold transition-colors shadow-soft"
                 >
-                  Join now
+                  {t('nav.joinNow')}
                 </Link>
               </>
             ) : (
@@ -465,15 +474,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onScrollToSection, onContactClic
                   onClick={() => setMobileMenuOpen(false)}
                   className="w-full min-h-[52px] flex items-center justify-center rounded-full bg-[#111111] hover:bg-neutral-800 text-white text-[16px] font-semibold transition-colors shadow-soft"
                 >
-                  {isApproved ? 'Continue watching' : 'Activate access'}
+                  {isApproved ? t('nav.continueWatching') : t('nav.activateAccessCta')}
                 </Link>
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="w-full min-h-[44px] flex items-center justify-center gap-2 rounded-full border border-rose-200 bg-rose-50/60 text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
+                  className="w-full min-h-[44px] flex items-center justify-center gap-2 rounded-full border border-rose-200 bg-rose-50/60 text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>Log out</span>
+                  <span>{t('nav.logOut')}</span>
                 </button>
               </>
             )}
