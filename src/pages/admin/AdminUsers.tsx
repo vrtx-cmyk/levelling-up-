@@ -264,15 +264,14 @@ export const AdminUsers: React.FC = () => {
 
   const renderStatusBadge = (status: Profile['status']) => (
     <span
-      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${
-        status === 'approved'
-          ? 'bg-emerald-50 text-emerald-700'
-          : status === 'pending'
-            ? 'bg-amber-50 text-amber-700'
-            : status === 'rejected'
-              ? 'bg-rose-50 text-rose-700'
-              : 'bg-neutral-100 text-[#6B7280]'
-      }`}
+      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${status === 'approved'
+        ? 'bg-emerald-50 text-emerald-700'
+        : status === 'pending'
+          ? 'bg-amber-50 text-amber-700'
+          : status === 'rejected'
+            ? 'bg-rose-50 text-rose-700'
+            : 'bg-neutral-100 text-[#6B7280]'
+        }`}
     >
       {status === 'approved' && <CheckCircle2 className="w-3 h-3" />}
       {status === 'pending' && <Clock className="w-3 h-3" />}
